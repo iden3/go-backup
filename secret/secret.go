@@ -6,7 +6,7 @@ import (
 
 
 type Secret struct {
-   X   map[uint64]ff.Element
+   Config   map[uint64]ff.Element
 }
 
 // Interface to describe Secret Sharing :
