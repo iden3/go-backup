@@ -19,33 +19,35 @@ type Shamir struct{
 // Generate secret from shares S[0],...,S[N-1], where S[i] = (sx[i], sy[i]) = (x, poly(x)) 
 // secret = Sum_fromj=0_to_N-1   sy[j]   *    Prod_from_m=0,m!=j_to_m=N-1 ( sx[m] / (sx[m] - sx[j]))
 //  sx[i] is an integer, sy[i] is a FF in Montgomery
-func (s Shamir) GenerateSecret(shares map[uint64]ff.Element) (ff.Element, error) {
+func (s Shamir) GenerateSecret(shares []Share) (ff.Element, error) {
    secret , _ := ff.NewElement(s.Element_type)
    n_ff, _ := ff.NewElement(s.Element_type)
    d_ff, _ := ff.NewElement(s.Element_type)
    l_ff, _ := ff.NewElement(s.Element_type)
-   var xm, xj  uint64
+   var xm, xj  int
 
-   for jidx, share := range(shares) {
+   for _, share1 := range(shares) {
+     jidx := share1.Px
      l_ff.SetOne()
-     for midx := range(shares) {
+     for _, share2 := range(shares) {
+        midx := share2.Px
         if midx == jidx{
            continue
         }
         xm  = midx
         xj  = jidx
-        n_ff.SetUint64(xm)
+        n_ff.SetUint64(uint64(xm))
         if xm > xj {
-          d_ff.SetUint64(xm-xj)
+          d_ff.SetUint64(uint64(xm-xj))
         } else {
-          d_ff.SetUint64(xj-xm)
+          d_ff.SetUint64(uint64(xj-xm))
           d_ff.Neg(d_ff)
         }
         d_ff.Inverse(d_ff)
         n_ff.MulAssign(d_ff)
         l_ff.MulAssign(n_ff)
      }
-     l_ff.MulAssign(share)
+     l_ff.MulAssign(share1.Py)
      secret.AddAssign(l_ff)
    }
 
@@ -56,29 +58,32 @@ func (s Shamir) GenerateSecret(shares map[uint64]ff.Element) (ff.Element, error)
 // Generate shares in Montgomery
 // for a given poly p(x), generate N shares (N=Max_shares) s[1], s[1],...,s[N] 
 // such that s[i] = p(i) for  0 < i < N and  s[0] = secret (s[0] is not a share) is in Regular fmt
-func (s Shamir) GenerateShares(secret ff.Element ) (map[uint64]ff.Element, error) {
+func (s Shamir) GenerateShares(secret ff.Element ) ([]Share, error) {
 
-   shares := make(map[uint64]ff.Element)
+   shares := make([]Share,0)
    val    := 0.0
 
    //initialize Poly. Coefficients are in Montgomery    
    poly := s.generatePoly()
 
    // Generate all shares
-   for idx := uint64(1); idx <= uint64(s.Max_shares); idx++{
+   for idx := 1; idx <= s.Max_shares; idx++{
       tmp_ff, _ := ff.NewElement(s.Element_type)
 
        // FF Element storing share y-coordinate
-      shares[idx], _ = ff.NewElement(s.Element_type)
+      py, _ := ff.NewElement(s.Element_type)
+      new_share := Share{
+                         Px : idx,
+                         Py : py.Set(secret),
+                  }
 
-      // s[0] = secret in Montgomery
-      shares[idx].Set(secret)
       for coeff_idx, coeff :=  range(poly) {
           val = math.Pow(float64(idx), float64(coeff_idx+1))
           tmp_ff.SetUint64(uint64(val))
           tmp_ff.MulAssign(coeff)
-          shares[idx].AddAssign(tmp_ff)
+          new_share.Py.AddAssign(tmp_ff)
       }
+      shares = append(shares, new_share)
    }
 
    return shares, nil

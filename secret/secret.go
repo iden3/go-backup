@@ -5,14 +5,15 @@ import (
 )
 
 
-type Secret struct {
-   Config   map[uint64]ff.Element
+type Share struct {
+   Px   int
+   Py   ff.Element
 }
 
 // Interface to describe Secret Sharing :
 type SecretSharer interface {
-    GenerateSecret(shares map[uint64]ff.Element)    (ff.Element, error) 
-    GenerateShares(ff.Element) (map[uint64]ff.Element, error)
+    GenerateSecret(shares []Share)    (ff.Element, error) 
+    GenerateShares(ff.Element) ([]Share, error)
     GetMinShares() int
     GetMaxShares() int 
     GetElType() int

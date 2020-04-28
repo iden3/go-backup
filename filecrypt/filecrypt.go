@@ -44,14 +44,15 @@ import (
         "os"
 )
 
-// Interface to describe Filecrypter operations:
-//   Encrypt : Encrypt cleartext into a filecrypt compatible format file
-//   Decrypt : Decrypt a filecrypt file to cleartext
+// Interface to describe FileCryptKey operations:
 type fileCryptKey interface {
    generateKey(fname string) ([]byte, error)
    retrieveKey(key, d []byte, f *os.File) ([]byte, error)
 }
 
+// Interface to describe FileCryptEnc operations:
+//   Encrypt : Encrypt cleartext into a filecrypt compatible format file
+//   Decrypt : Decrypt a filecrypt file to cleartext
 type fileCryptEnc interface {
    decrypt(cyphertext, key []byte) (interface{}, error)
    encrypt(fname string, key []byte, cleartext interface{}) error

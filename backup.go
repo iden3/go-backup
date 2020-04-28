@@ -21,7 +21,7 @@
 package main
 
 import (
-        "github.com/iden3/go-backup/ff"
+        "github.com/iden3/go-backup/secret"
      fc "github.com/iden3/go-backup/filecrypt"
         "fmt"
 )
@@ -48,21 +48,20 @@ func main(){
    //   how to contact them in the future.
 
       // assign first share
-   AddCustodian("Pedrito", QR ,shares,1,1 )
+   AddCustodian("Pedrito", QR ,shares,0,1 )
       // assign second share
-   AddCustodian("Faustino", QR ,shares,2,1 )
+   AddCustodian("Faustino", QR ,shares,1,1 )
       // assign third and fourth share
-   AddCustodian("Sara Baras",QR  ,shares,3,2 )
+   AddCustodian("Sara Baras",QR  ,shares,2,2 )
       // assign 5th share
-   AddCustodian("Sergio", QR ,shares,5,1 )
+   AddCustodian("Sergio", QR ,shares,4,1 )
       // assign 6th share
-   AddCustodian("Raul", QR ,shares,6,1 )
+   AddCustodian("Raul", QR ,shares,5,1 )
 
    // Define which information is included in Backup file. Contents of the backup are not important right
    // now. It is just to show how easy it is to build the backup file.
    // At this point, the buildup is static (I need to have a switch case in AddToBackup with all possible
    // data stucture types that can be added to the backup, but there should be a more dynamic way...)
-
      // Add Rx Claims
    AddToBackup(CLAIMS,        claims,     ENCRYPT)
      // Add wallet configuration
@@ -103,7 +102,7 @@ func main(){
    //   be  a single function and not a family of functions depending on type, but
    //   for now it was easier to do it like this
    retrieved_custodians := RetrieveCustodians(info)
-   collected_shares := make([]map[uint64]ff.Element, 0)
+   collected_shares := make([]secret.Share, 0)
  
    res := CheckEqual(custodians, retrieved_custodians)
    if res {
@@ -137,7 +136,6 @@ func main(){
    // The custodian then sends the share in P2P channel. In our case, we assume that we are 
    //  face to face and the custodian gfenerates a QR that we can scan. 
 
-   
    for _, custodian := range(retrieved_custodians){
       collected_shares = append(collected_shares, ScanQRShare(&custodian)...)
    }

@@ -6,6 +6,7 @@ import (
          "encoding/gob"
          "math/rand"
          "reflect"
+         "os"
 )
 
 
@@ -62,7 +63,11 @@ func RandStringBytes(n int) string {
 }
 
 
-
+func init() {
+   if _, err := os.Stat("./testdata"); os.IsNotExist(err) {
+      os.Mkdir("./testdata", 0755)
+   }
+}
 func TestFCDirectGCM(t *testing.T) {
    // init tests data
    test_data1 := initFCTest1(12)

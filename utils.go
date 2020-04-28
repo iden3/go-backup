@@ -110,7 +110,7 @@ func initMerkleTree() *MT {
 var secret_cfg secret.Shamir
 
 // Generate shares from secret
-func GenerateShares(secret []byte) (map[uint64]ff.Element) {
+func GenerateShares(secret []byte) ([]secret.Share) {
    // convert secret to right format
    secret_ff, _ := ff.NewElement(PRIME)
    secret_ff.FromByte(secret)
@@ -121,17 +121,15 @@ func GenerateShares(secret []byte) (map[uint64]ff.Element) {
 } 
 
 // Generate secret from shares
-func GenerateKey(shares []map[uint64]ff.Element, sharing_cfg secret.SecretSharer) []byte{
-   shares_map := make(map[uint64]ff.Element)
-   for _, el := range(shares) {
-     for k2, el2 := range(el) {
-        shares_map[k2] = el2
-     }
-     if len(shares_map ) == sharing_cfg.GetMinShares() {
+func GenerateKey(shares []secret.Share, sharing_cfg secret.SecretSharer) []byte{
+   shares_pool := make([]secret.Share,0)
+   for _, share := range(shares) {
+     shares_pool = append(shares_pool, share)
+     if len(shares_pool ) == sharing_cfg.GetMinShares() {
        break
      }
    }
-   secret, err := sharing_cfg.GenerateSecret(shares_map)
+   secret, err := sharing_cfg.GenerateSecret(shares_pool)
    if err != nil {
      panic(err)
    }
@@ -166,7 +164,7 @@ var custodians []Custodian
 
 
 // Add new Custodian and simulate the distribution of N shares
-func AddCustodian(nickname string, method int, shares map[uint64]ff.Element, start_idx, nshares int ) error {
+func AddCustodian(nickname string, method int, shares []secret.Share, start_idx, nshares int ) error {
   // add info to custodian
   new_custodian := Custodian {
                                  Nickname : nickname,
@@ -174,18 +172,8 @@ func AddCustodian(nickname string, method int, shares map[uint64]ff.Element, sta
                              }
 
   // encode share information to stream of bytes. 
-  shares_array  := make([]map[uint64]ff.Element, nshares)
-  share_idx := 0
-  for idx, el := range(shares){
-    if int(idx) >= start_idx && int(idx) < start_idx + nshares{
-        shares_array[share_idx] = map[uint64]ff.Element{ idx :  el}
-        share_idx+=1
-        if share_idx == nshares{
-           break
-        }
-    }
-  }
-
+  shares_array  := make([]secret.Share, 0)
+  shares_array = append(shares_array,shares[start_idx:start_idx+nshares]...)
 
   // generate QR
   if method == QR {
@@ -216,7 +204,7 @@ func AddCustodian(nickname string, method int, shares map[uint64]ff.Element, sta
 
 
 // Decode QR that includes a share, and return it a slice of maps with the index and the share
-func ScanQRShare(cust *Custodian) []map[uint64]ff.Element{
+func ScanQRShare(cust *Custodian) []secret.Share{
   var tmp_fname string
   if filepath.Ext(cust.Fname) == ".png" {
      tmp_fname  = QR_DIR + "tmp_f"
@@ -247,9 +235,7 @@ func ScanQRShare(cust *Custodian) []map[uint64]ff.Element{
    // tmp_fname is a file including the encoded share.
    qrinfo := Decode(tmp_fname, nil)
   
-  
   share := RetrieveShares(qrinfo)
-
   return share
 }
 
@@ -297,8 +283,8 @@ func encodeType(dtype int){
 
       case SHARES:
           el1, _ := ff.NewElement(PRIME)
-          var el2  map[uint64]ff.Element
-          var el3  []map[uint64]ff.Element
+          var el2  secret.Share
+          var el3  []secret.Share
           gob.Register(el1)
           gob.Register(el2)
           gob.Register(el3)
@@ -307,7 +293,7 @@ func encodeType(dtype int){
 
 
 // Transform share encoding to string
-func encodeShareToString(shares []map[uint64]ff.Element) string {
+func encodeShareToString(shares []secret.Share) string {
      tmp_fname := QR_DIR+"share-tmp.dat"
      encodeShare(shares)
      defer os.Remove(tmp_fname)
@@ -323,7 +309,7 @@ func encodeShareToString(shares []map[uint64]ff.Element) string {
 }
 
 // Transform share encoding to []byte
-func encodeShareToByte(shares []map[uint64]ff.Element) []byte {
+func encodeShareToByte(shares []secret.Share) []byte {
      tmp_fname := QR_DIR+"share-tmp.dat"
      encodeShare(shares)
      defer os.Remove(tmp_fname)
@@ -358,7 +344,7 @@ func readBinaryFile(tmp_fname string) []byte{
 
 // Generate share blocks to distribure via secret sharing and return 
 // filecrpyt bytestream
-func encodeShare(shares []map[uint64]ff.Element){
+func encodeShare(shares []secret.Share){
      encodeType(SHARES)
 
      // Key header -> no key
@@ -488,15 +474,15 @@ func RetrieveMT(info []interface{}) *MT{
 
 
 // Retrieve shares data structure
-func RetrieveShares(info []interface{}) []map[uint64]ff.Element {
-   var r []map[uint64]ff.Element
+func RetrieveShares(info []interface{}) []secret.Share {
+   r := make([]secret.Share,0)
    for _, el := range(info){
        switch el.(type) {
-          case []map[uint64]ff.Element :
-            r = el.([]map[uint64]ff.Element) 
+          case []secret.Share :
+            r = el.([]secret.Share)
             return r
-          case map[uint64]ff.Element :
-            r = append(r, el.(map[uint64]ff.Element))
+          case secret.Share :
+            r = append(r, el.(secret.Share))
             return r
        }
    }

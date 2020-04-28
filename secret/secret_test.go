@@ -33,7 +33,7 @@ func TestShamirOK(t *testing.T) {
    
    // select shares to regenerate secret
    for iter :=0; iter< 10; iter++ {
-     selected_shares := shuffleShares(shares, prime, min_shares, max_shares)
+     selected_shares := shuffleShares(shares, min_shares)
      fmt.Printf("\nIteration : %d\n",iter)
      //fmt.Println("Selected Shares ", selected_shares)
 
@@ -76,7 +76,7 @@ func TestShamirKO(t *testing.T) {
    
    // select insufficient shares to regenerate secret
    for iter :=0; iter< 10; iter++ {
-     selected_shares := shuffleShares(shares, prime, min_shares-1, max_shares)
+     selected_shares := shuffleShares(shares, min_shares-1)
      fmt.Printf("\nIteration : %d\n",iter)
      //fmt.Println("Selected Shares ", selected_shares)
 
@@ -93,22 +93,22 @@ func TestShamirKO(t *testing.T) {
    }
 }
 
-func shuffleShares(pool map[uint64]ff.Element, prime, n, max int) map[uint64]ff.Element {
-   selected := make(map[uint64]ff.Element)
+func shuffleShares(pool []Share, n int) []Share {
+   selected := make([]Share, 0)
+   nshares := len(pool)
    for i := 0 ; i < n; i++ {
       found := true
       for found {
          found = false
-         new_idx := uint64(rand.Intn(max)+1)
-         for idx  := range(selected) {
-            if idx == new_idx{
+         new_idx := rand.Intn(nshares)
+         for _, share := range(selected) {
+            if share.Px == pool[new_idx].Px {
               found = true
               continue
             }
          }
          if !found {
-           selected[new_idx], _ = ff.NewElement(prime)
-           selected[new_idx].Set(pool[new_idx])
+           selected = append(selected, pool[new_idx])
          }
       }
    }
