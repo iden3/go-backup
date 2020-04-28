@@ -1,11 +1,16 @@
 /*
  Generic wrapper for goff ff library. 
- To add more element types, download goff (https://github.com/ConsenSys/goff v0.2.1), apply the patch goff_v021.patch (patch -p1 < goff_v021.patch) and run as
+
+ To add more element types, download goff (https://github.com/iden3/goff) 
    go run goff -m 21888242871839275222246405745257275088548364400416034343698204186575808495617 -o ./ff -p ff -e element_bn256p -i Element
 
    This will generate a new element element_bnp256p in folder ff that can be used by this wrapper
 
+  goff fork applies some changes to templates:
+   - Supports 32 bit architectures (changes done in BigInt conversion utilities)
+   - Supports generated ff packages to be included in an interface
 */
+
 package ff
 
 import (
