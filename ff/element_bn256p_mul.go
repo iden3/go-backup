@@ -240,6 +240,7 @@ func mulAssignelement_bn256p(z, x Element) {
 		zar[3], _ = bits.Sub64(zar[3], 3486998266802970665, b)
 	}
 	z.SetFromArray(zar)
+
 }
 
 func fromMontelement_bn256p(z *element_bn256p) {

@@ -72,6 +72,7 @@ func (z *element_bn256q) Set(x Element) Element {
 	return z
 }
 
+// Set z = x
 func (z *element_bn256q) SetFromArray(xar []uint64) Element {
 
 	z[0] = xar[0]
