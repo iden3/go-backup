@@ -18,3 +18,4 @@ go-backup
 ./testdata/tmp_f
 *.bk
 *.dat
+*.swp*

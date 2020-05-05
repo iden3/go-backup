@@ -24,6 +24,7 @@ import (
 type  Element interface {
     GetUint64() []uint64
     SetUint64(v uint64) Element
+    SetFromArray(x []uint64) Element
     Set(x Element) Element
     SetZero() Element
     SetOne() Element
