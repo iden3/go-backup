@@ -21,8 +21,9 @@ export ANDROID_HOME= {PATH to Android SDK}
 ```
 
 ## aar generation
-
+```
 $ gomobile bind -o app/backuplib.aar -target=android ../backuplib/
+```
 
 ## Use of .aar in Android project
 
