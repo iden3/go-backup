@@ -11,7 +11,7 @@ import androidx.appcompat.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import wrapper.*;
+import backuplib.*;
 import android.util.Log;
 
 public class MainActivity extends AppCompatActivity {
@@ -32,9 +32,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        String kOp = new String(Wrapper.keyOperational());
+        String kOp = new String(Backuplib.keyOperational());
 
-        Log.d("KOP", kOp);
+        Log.d("KOP Value", kOp);
     }
 
     @Override

@@ -22,7 +22,7 @@ export ANDROID_HOME= {PATH to Android SDK}
 
 ##aar generation
 
-$ gomobile bind -o app/backup.aar -target=android ../wrapper/
+$ gomobile bind -o app/backuplib.aar -target=android ../backuplib/
 
 ##Use of .aar in Android project
 
@@ -36,5 +36,5 @@ Edit android\app\build.gradle adding:
 
 dependencies {
 ...
-+    implementation (name:'backup', ext:'aar')
++    implementation (name:'backuplib', ext:'aar')
 }
