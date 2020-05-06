@@ -1,7 +1,7 @@
 ## Gomobile instalation
 ```
 $ go get golang.org/x/mobile/cmd/gomobile
-$ gomobile initç
+$ gomobile init
 ```
 ## Install Android Studio (on Ubuntu 20.04):
 ```
