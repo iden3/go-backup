@@ -76,16 +76,29 @@ public class ScanQr extends AppCompatActivity {
         backupFile = folder+"backup.bk";
 
 
+        // Generate Key
         byte[] kOp = Backuplib.keyOperational();
         Backuplib.setkOp(kOp);
-        Log.d("KOP", new String(kOp));
+        String kOpString = byteArrayToString(kOp);
+        Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOpString);
 
+        // Generate ID
         byte[] iD = Backuplib.newID();
         Backuplib.setId(iD);
-        Log.d("ID", new String(iD));
+        String iDString = byteArrayToString(iD);
+        Log.d("Backuplib", "iD["+String.valueOf(iD.length)+"] : " +iDString);
 
+        // Generate shares from key
         Backuplib.generateShares(kOp);
-
+        long nshares = Backuplib.getNShares();
+        Log.d("Backuplib", "Generated "+ String.valueOf(nshares)+ " Shares");
+        Shares shares = Backuplib.getShares();
+        for (int i=0; i < nshares; i++){
+          Share share = Backuplib.getShare(i);
+          String PyString = byteArrayToString(share.getPy());
+          Log.d("Backuplib", "Share["+String.valueOf(i)+"] - Px : " +String.valueOf(share.getPx()));
+          Log.d("Backuplib", "Share["+String.valueOf(i)+"] - Py : " +PyString);
+        }
     }
 
     private void updateNSharesTV() {
@@ -93,6 +106,16 @@ public class ScanQr extends AppCompatActivity {
         displayedNSharesTV.setText(nshares_string);
 
     }
+
+    private String byteArrayToString(byte[] data){
+       String result="";
+       for (int i=0; i< data.length; i++) {
+          result = result + String.valueOf(data[i]) + " ";
+       }
+       return result;
+    }
+
+    // On push button. Gen QR from share
     public void clickEventGenQR(View v) {
 
         String custodian_name = nameET.getText().toString();
@@ -104,16 +127,25 @@ public class ScanQr extends AppCompatActivity {
         } catch (Exception e) {
             nSharesToCreate = 0;
         }
-        String folder  = getApplicationContext().getFilesDir().getAbsolutePath()+"/";
-        Log.d("Folder",folder);
+        // Check if we have distributed all shares
         if (nSharesToCreate + nshares <= maxShares &&
                 nSharesToCreate > 0 &&
                 custodian_name.length() > 0) {
             try {
                 // assign first share
                 Backuplib.addCustodian(custodian_name, folder, Backuplib.QR, nshares, nSharesToCreate);
+                Log.d("Backuplib", "Number of shares distributed : "+String.valueOf(nshares));
+                Log.d("Backuplib", "Number of shares requested : "+String.valueOf(nSharesToCreate));
+                Custodians custodians = Backuplib.getSecretCustodians();
+                long ncustodians = Backuplib.getNCustodians();
+                Log.d("Backuplib", "Number of Custodians: "+String.valueOf(ncustodians));
+                Custodian custodian = Backuplib.getCustodian(ncustodians-1);
+                Log.d("Backuplib", "Custodian["+String.valueOf(ncustodians-1)+"] Nickname : "+custodian.getNickname());
+                Log.d("Backuplib", "Custodian["+String.valueOf(ncustodians-1)+"] N Shares : "+String.valueOf(custodian.getN_shares()));
+                Log.d("Backuplib", "Custodian["+String.valueOf(ncustodians-1)+"] Fname : "+custodian.getFname());
+
             } catch (Exception e) {
-                Log.d("Error Adding Custodian", custodian_name);
+                Log.d("Backuplib", "Error Adding Custodian " + custodian_name);
             }
             nshares+=nSharesToCreate;
             updateNSharesTV();
@@ -140,6 +172,7 @@ public class ScanQr extends AppCompatActivity {
         nameET.setText("");
     }
 
+    // On push button. Gen Backup
     public void clickEventHome(View v) {
 
         if (nshares >= minShares) {
@@ -165,8 +198,8 @@ public class ScanQr extends AppCompatActivity {
             // Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
             //  for encrypted sections. Also not, that we can mix encrypted and non-encrpyted information in the
             // same baclup file
-            Backuplib.createBackup(Backuplib.PBKDF2_KEY, Backuplib.SHA256_HASH, Backuplib.GCM_ENCRYPTION, backupFile, kOp);
-            Log.d("Backup", new String("Created"));
+            Backuplib.createBackup(Backuplib.PBKDF2_KEY, Backuplib.SHA256_HASH, Backuplib.GCM_ENCRYPTION, backupFile);
+            Log.d("Backuplib", "Backup Created");
 
             Intent Home = new Intent(getApplicationContext(), MainActivity.class);
             startActivity(Home);

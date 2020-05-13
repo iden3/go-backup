@@ -30,73 +30,68 @@ func AddToBackup(t, action int) {
 	// encode type
 	encodeType(t)
 
-        backup_el := newBackupElement(t, action)
+	backup_el := newBackupElement(t, action)
 	backup_registry[t] = *backup_el
 }
 
-func newBackupElement(t, action int ) *Backup {
-        switch t {
-           case CLAIMS :
-	       // Add to backup registry
-	       backup_el := Backup{data: GetBackupClaims(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
-   
-           case WALLET_CONFIG :
-	       backup_el := Backup{data: GetWallet(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+func newBackupElement(t, action int) *Backup {
+	switch t {
+	case CLAIMS:
+		// Add to backup registry
+		backup_el := Backup{data: GetBackupClaims(),
+			mode: action,
+		}
+		return &backup_el
 
-           
-           case ZKP_INFO :
-	       backup_el := Backup{data: GetZKP(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+	case WALLET_CONFIG:
+		backup_el := Backup{data: GetWallet(),
+			mode: action,
+		}
+		return &backup_el
 
- 
-           case MERKLE_TREE :
-	       backup_el := Backup{data: GetMT(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+	case ZKP_INFO:
+		backup_el := Backup{data: GetZKP(),
+			mode: action,
+		}
+		return &backup_el
 
+	case MERKLE_TREE:
+		backup_el := Backup{data: GetMT(),
+			mode: action,
+		}
+		return &backup_el
 
-           case CUSTODIAN :
-	       backup_el := Backup{data: GetCustodians(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+	case CUSTODIAN:
+		backup_el := Backup{data: GetCustodians(),
+			mode: action,
+		}
+		return &backup_el
 
- 
-           case GENID:
-	       backup_el := Backup{data: GetId(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+	case GENID:
+		backup_el := Backup{data: GetId(),
+			mode: action,
+		}
+		return &backup_el
 
- 
-           case SSHARING :
-	       backup_el := Backup{data: GetSecretCfgOriginal(),
-	       	                   mode: action,
-	                          }
-               return &backup_el
+	case SSHARING:
+		backup_el := Backup{data: GetSecretCfgOriginal(),
+			mode: action,
+		}
+		return &backup_el
 
+	case SHARES:
+		backup_el := Backup{data: toShares(GetShares()),
+			mode: action,
+		}
+		return &backup_el
 
-           case SHARES :
-	       backup_el := Backup{data: toShares(GetShares()),
-	       	                   mode: action,
-	                          }
-               return &backup_el
-
-        }
-        return nil
+	}
+	return nil
 }
 
 // Generate backup file
-func CreateBackup(key_t, hash_t, enc_t int, fname string, key []byte) {
+func CreateBackup(key_t, hash_t, enc_t int, fname string) {
+	key := GetkOp()
 	// Add Key -> for now, only PBKDF2 + GCM supported, but it can be expanded easily
 	//  Assume fixed PBKDF2 config. Header shared for both encrypted and non encrpyted blocks
 	hdr_k := &fc.Pbkdf2Fc{}

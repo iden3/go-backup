@@ -7,12 +7,12 @@
 package backuplib
 
 import (
-	"reflect"
 	crand "crypto/rand"
-	"io"
 	"github.com/iden3/go-backup/ff"
-	"github.com/iden3/go-backup/secret"
 	fc "github.com/iden3/go-backup/filecrypt"
+	"github.com/iden3/go-backup/secret"
+	"io"
+	"reflect"
 )
 
 // Configuration constants
@@ -27,152 +27,151 @@ const (
 	QR_DIR         = "../testdata/"
 	PBKDF2_NITER   = 60000
 	PBKDF2_SALTLEN = 12
-        PBKDF2_KEY     = fc.FC_KEY_T_PBKDF2
-        SHA256_HASH    = fc.FC_HASH_SHA256
-        GCM_ENCRYPTION = fc.FC_GCM
+	PBKDF2_KEY     = fc.FC_KEY_T_PBKDF2
+	SHA256_HASH    = fc.FC_HASH_SHA256
+	GCM_ENCRYPTION = fc.FC_GCM
 )
 
-
-type BackupData struct{
-   iD               []byte
-   kOp              []byte
-   Wallet           *WalletConfig
-   Claims           *Claim
-   ZKPData          *ZKP
-   MerkleTree       *MT
-   SecretShares     *Shares
-   Secret_cfg       *secret.Shamir
-   SecretCustodians *Custodians
+type BackupData struct {
+	iD               []byte
+	kOp              []byte
+	Wallet           *WalletConfig
+	Claims           *Claim
+	ZKPData          *ZKP
+	MerkleTree       *MT
+	SecretShares     *Shares
+	Secret_cfg       *secret.Shamir
+	SecretCustodians *Custodians
 }
 
 var DataBackup BackupData
 
 func GetId() []byte {
-   return DataBackup.iD
+	return DataBackup.iD
 }
 
 func SetId(iD []byte) {
-   DataBackup.iD = iD
+	DataBackup.iD = make([]byte, len(iD))
+	copy(DataBackup.iD, iD)
 }
 
 func GetkOp() []byte {
-    return DataBackup.kOp
+	return DataBackup.kOp
 }
 
 func SetkOp(kOp []byte) {
-   DataBackup.kOp = kOp 
+	DataBackup.kOp = make([]byte, len(kOp))
+	copy(DataBackup.kOp, kOp)
 }
 
 func GetWallet() *WalletConfig {
-   return DataBackup.Wallet
+	return DataBackup.Wallet
 }
 
-func SetWallet(data *WalletConfig){
-  DataBackup.Wallet = data
+func SetWallet(data *WalletConfig) {
+	DataBackup.Wallet = data
 }
 
 func GetBackupClaims() *Claim {
-   return DataBackup.Claims
+	return DataBackup.Claims
 }
 
-func SetBackupClaims(data *Claim){
-  DataBackup.Claims = data
+func SetBackupClaims(data *Claim) {
+	DataBackup.Claims = data
 }
 
 func GetZKP() *ZKP {
-   return DataBackup.ZKPData
+	return DataBackup.ZKPData
 }
 
-func SetZKP(data *ZKP){
-  DataBackup.ZKPData = data
+func SetZKP(data *ZKP) {
+	DataBackup.ZKPData = data
 }
 
 func GetMT() *MT {
-   return DataBackup.MerkleTree
+	return DataBackup.MerkleTree
 }
 
-func SetMT(data *MT){
-  DataBackup.MerkleTree = data
+func SetMT(data *MT) {
+	DataBackup.MerkleTree = data
 }
 
 func GetShares() *Shares {
-    return DataBackup.SecretShares
+	return DataBackup.SecretShares
 }
 
 func SetShares(data *Shares) {
-    DataBackup.SecretShares = data
+	DataBackup.SecretShares = data
 }
 
 //func GetSecretCfg()  *secret.Shamir {
-func GetSecretCfg()  *Secret {
-    secret_cfg := Secret{
-                          secret.Shamir{
-                                     Max_shares : DataBackup.Secret_cfg.GetMaxShares(),
-                                     Min_shares : DataBackup.Secret_cfg.GetMinShares(),
-                                     Element_type :DataBackup.Secret_cfg.GetElType(), 
-                                       },
-                         }
-    return &secret_cfg
+func GetSecretCfg() *Secret {
+	secret_cfg := Secret{
+		secret.Shamir{
+			Max_shares:   DataBackup.Secret_cfg.GetMaxShares(),
+			Min_shares:   DataBackup.Secret_cfg.GetMinShares(),
+			Element_type: DataBackup.Secret_cfg.GetElType(),
+		},
+	}
+	return &secret_cfg
 }
-func GetSecretCfgOriginal()  *secret.Shamir {
-    return  DataBackup.Secret_cfg
+func GetSecretCfgOriginal() *secret.Shamir {
+	return DataBackup.Secret_cfg
 }
 
 //func SetSecretCfg(data *secret.Shamir) {
 func SetSecretCfg(data *Secret) {
-    if data != nil {
-       secret_cfg := secret.Shamir{
-                                 Max_shares : data.GetMaxShares(),
-                                 Min_shares : data.GetMinShares(),
-                                 Element_type  :data.GetElType(),
-                                }
-       DataBackup.Secret_cfg = &secret_cfg
-    } else {
-       DataBackup.Secret_cfg = nil
-    }
+	if data != nil {
+		secret_cfg := secret.Shamir{
+			Max_shares:   data.GetMaxShares(),
+			Min_shares:   data.GetMinShares(),
+			Element_type: data.GetElType(),
+		}
+		DataBackup.Secret_cfg = &secret_cfg
+	} else {
+		DataBackup.Secret_cfg = nil
+	}
 }
 
-func GetCustodians()  *Custodians {
-    return DataBackup.SecretCustodians
+func GetCustodians() *Custodians {
+	return DataBackup.SecretCustodians
 }
 
 func SetCustodians(data *Custodians) {
-    DataBackup.SecretCustodians = data
+	DataBackup.SecretCustodians = data
 }
-
-
 
 ////
 func init() {
-     Init()
+	Init()
 }
 
-func Init(){
+func Init() {
 	//init aux data
 	Claims = initClaims()
 	ZKPData = initZKP()
 	MerkleTree = initMerkleTree()
 
-        // init aux data in backup structure
-        SetBackupClaims(Claims)
-        SetWallet(initWalletConfig())
-        SetZKP(ZKPData)
-        SetMT(MerkleTree)
+	// init aux data in backup structure
+	SetBackupClaims(Claims)
+	SetWallet(initWalletConfig())
+	SetZKP(ZKPData)
+	SetMT(MerkleTree)
 
 	// init Secret Sharing
-        InitSecretCfg()
+	InitSecretCfg()
 
-        // init Secret Shares
-        InitSecretShares()
+	// init Secret Shares
+	InitSecretShares()
 
-        // init backup registry
-        InitBackup()
+	// init backup registry
+	InitBackup()
 
-        // init Encoding
-        InitEncoding()
+	// init Encoding
+	InitEncoding()
 
-        // init Custodians
-        InitCustodians()
+	// init Custodians
+	InitCustodians()
 }
 func CheckEqual(expected, obtained interface{}) bool {
 	flag := false

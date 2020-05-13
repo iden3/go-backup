@@ -9,16 +9,17 @@ package backuplib
 import (
 	"bytes"
 	"errors"
+	"github.com/iden3/go-backup/secret"
+	qrdec "github.com/liyue201/goqr"
+	qrgen "github.com/skip2/go-qrcode"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"github.com/iden3/go-backup/secret"
-	qrdec "github.com/liyue201/goqr"
-	qrgen "github.com/skip2/go-qrcode"
 )
+
 // Attempts to emulate how we could exchage shares. QR and NONE  the only one working in this demo
 const (
 	EMAIL = iota
@@ -35,23 +36,23 @@ type Custodian struct {
 }
 
 type Custodians struct {
-      Data []Custodian
+	Data []Custodian
 }
 
 var SecretCustodians *Custodians
 
 func GetNCustodians() int {
-   custodians := GetCustodians()
-   return len(custodians.Data)
+	custodians := GetCustodians()
+	return len(custodians.Data)
 }
 
 func GetCustodian(n int) *Custodian {
-   custodians := GetCustodians()
-   if n < len(custodians.Data) {
-      return &custodians.Data[n]
-   } else {
-     return nil
-   }
+	custodians := GetCustodians()
+	if n < len(custodians.Data) {
+		return &custodians.Data[n]
+	} else {
+		return nil
+	}
 }
 
 // Add new Custodian and simulate the distribution of N shares
@@ -73,9 +74,9 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 		new_custodian.Fname = qrfile
 		err := qrgen.WriteFile(share_string, qrgen.High, 256, qrfile)
 		if err == nil {
-                        custodians := GetCustodians()
+			custodians := GetCustodians()
 			custodians.Data = append(custodians.Data, new_custodian)
-                        SetCustodians(custodians)
+			SetCustodians(custodians)
 		}
 		return err
 
@@ -87,9 +88,9 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 		file, _ := os.Create(fname)
 		file.Write(share_bytes)
 		file.Close()
-                custodians := GetCustodians()
+		custodians := GetCustodians()
 		custodians.Data = append(SecretCustodians.Data, new_custodian)
-                SetCustodians(custodians)
+		SetCustodians(custodians)
 		return nil
 
 	} else {
@@ -98,35 +99,35 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 }
 
 func InitCustodians() {
-  var custodians Custodians
-  custodians_data := make([]Custodian,0)
-  custodians.Data = custodians_data
-  SetCustodians(&custodians)
+	var custodians Custodians
+	custodians_data := make([]Custodian, 0)
+	custodians.Data = custodians_data
+	SetCustodians(&custodians)
 
 }
 
 func AddCustodian(nickname, folder string, method int, start_idx, nshares int) error {
-  shares_go := toShares(GetShares())
-  
-  err := addCustodian(nickname, folder, method, shares_go, start_idx, nshares)
-  return err
+	shares_go := toShares(GetShares())
+
+	err := addCustodian(nickname, folder, method, shares_go, start_idx, nshares)
+	return err
 }
 
 func ScanQRShare(fname string) {
-   rx_shares_go := scanQRShare(fname)
-   rx_share_mobile := Shares{Data : fromShares(rx_shares_go)}
+	rx_shares_go := scanQRShare(fname)
+	rx_share_mobile := Shares{Data: fromShares(rx_shares_go)}
 
-   shares := GetShares()
-   shares.Data = append(shares.Data, rx_share_mobile.Data...)
-   SetShares(shares)
+	shares := GetShares()
+	shares.Data = append(shares.Data, rx_share_mobile.Data...)
+	SetShares(shares)
 }
 
 // Decode QR that includes a share, and return it a slice of maps with the index and the share
 func scanQRShare(fname string) []secret.Share {
 	var tmp_fname string
 	if filepath.Ext(fname) == ".png" {
-                dir_name  := filepath.Dir(fname)
-		tmp_fname = dir_name+"/tmp_f"
+		dir_name := filepath.Dir(fname)
+		tmp_fname = dir_name + "/tmp_f"
 		imgdata, err := ioutil.ReadFile(fname)
 		if err != nil {
 			panic(err)
@@ -141,7 +142,7 @@ func scanQRShare(fname string) []secret.Share {
 			panic(err)
 		}
 		file, err := os.Create(tmp_fname)
-	        defer os.Remove(tmp_fname)
+		defer os.Remove(tmp_fname)
 		if err != nil {
 			panic(err)
 		}
@@ -158,4 +159,3 @@ func scanQRShare(fname string) []secret.Share {
 
 	return share
 }
-

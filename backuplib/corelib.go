@@ -1,4 +1,4 @@
-/* 
+/*
    Auxiliary information emulating claims, ZKP and Merkle Tree (these types are defined
    somewhere in core library)
    Strcuture and contents are not important. Just deinfing some arbitrary data structures
@@ -8,11 +8,9 @@
 package backuplib
 
 import (
+	"github.com/iden3/go-backup/ff"
 	"math/rand"
-  	"github.com/iden3/go-backup/ff"
 )
-
-
 
 type Claim struct {
 	Data [N_ELEMENTS]uint64
@@ -88,6 +86,3 @@ func NewID() []byte {
 	}
 	return id
 }
-
-
-

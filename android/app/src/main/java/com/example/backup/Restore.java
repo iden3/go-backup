@@ -67,12 +67,13 @@ public class Restore extends AppCompatActivity {
         folder  = getApplicationContext().getFilesDir().getAbsolutePath()+"/";
         backupFile = folder+"backup.bk";
 
-
+        // shuffle custodian order
         randomizeCustodian();
 
     }
 
 
+    // shuffle custodian order
     private void randomizeCustodian() {
         for (int i =0 ; i < ncustodians; i++){
             custodian_sequence[i] = i;
@@ -80,10 +81,8 @@ public class Restore extends AppCompatActivity {
         List<Integer> tmpList = Arrays.asList(custodian_sequence);
         Collections.shuffle(tmpList);
         tmpList.toArray(custodian_sequence);
-        System.out.println(Arrays.toString(custodian_sequence));
 
         qrNameTV.setText("");
-
     }
 
     private void updateNSharesTV() {
@@ -91,6 +90,8 @@ public class Restore extends AppCompatActivity {
         nSharesTV.setText(nshares_string);
 
     }
+
+    // On push button. scan new QR with share
     public void clickEventScanQR(View v) {
         Log.d("N custodians", String.valueOf(ncustodians));
         if (custodian_idx < ncustodians) {
@@ -99,8 +100,21 @@ public class Restore extends AppCompatActivity {
             long custodian_nshares = custodian.getN_shares();
             String fname = custodian.getFname();
             File qrFile = new File(fname);
+            Log.d("Backuplib", "Number of Custodians: "+String.valueOf(custodian_idx));
+            Log.d("Backuplib", "Custodian["+String.valueOf(custodian_idx)+"] Nickname : "+custodian_name);
+            Log.d("Backuplib", "Custodian["+String.valueOf(custodian_idx)+"] N Shares : "+String.valueOf(custodian_nshares));
+            Log.d("Backuplib", "Custodian["+String.valueOf(custodian_idx)+"] Fname : "+fname);
 
+            long prev_nshares = Backuplib.getNShares();
             Backuplib.scanQRShare(fname);
+            long post_nshares = Backuplib.getNShares();
+            Shares shares = Backuplib.getShares();
+            for (long i=prev_nshares; i < post_nshares; i++){
+               Share share = Backuplib.getShare(i);
+               String PyString = byteArrayToString(share.getPy());
+               Log.d("Backuplib", "Share["+String.valueOf(i)+"] - Px : " +String.valueOf(share.getPx()));
+               Log.d("Backuplib", "Share["+String.valueOf(i)+"] - Py : " +PyString);
+            }
 
             if (qrFile.exists()) {
                 Bitmap qrBitmap = BitmapFactory.decodeFile(qrFile.getAbsolutePath());
@@ -120,23 +134,29 @@ public class Restore extends AppCompatActivity {
 
     }
 
+    // On push button, restore backup
     public void clickEventRestore(View v) {
 
         if (nshares >= minShares) {
             // Generate Key
-            Backuplib.setkOp(Backuplib.generateKey());
-            Log.d("kOp", new String(Backuplib.getkOp()));
+            byte[] kOp = Backuplib.generateKey();
+            Backuplib.setkOp(kOp);
+            String kOpString = byteArrayToString(kOp);
+            Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOpString);
+
             // Decode and Decrypt backup file -> With the generated kOp, try to decrypt file.
             //   kOp is not used directly. We use a Key Derivation Function. All parameters for this
             //   function are public (except for the Key) and are in the encryption block header
             try {
-                Backuplib.decodeEncrypted(backupFile, Backuplib.getkOp());
-                Log.d("Decode", "Decode Encrypted OK");
+                String kOp3String = byteArrayToString(kOp);
+                Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOp3String);
+                Backuplib.decodeEncrypted(backupFile);
+                Log.d("Backuplib", "Decode Encrypted OK");
                 Intent Home = new Intent(getApplicationContext(), MainActivity.class);
                 startActivity(Home);
 
             } catch (Exception e) {
-                Log.d("Decode", "Error Decode Encrypted");
+                Log.d("Backuplib", "Error Decode Encrypted");
                 warningTV.setText("Error during decryption");
             }
 
@@ -144,6 +164,14 @@ public class Restore extends AppCompatActivity {
         } else {
             warningTV.setText("You need to scan at least "+minShares.toString()+" shares to recover key");
         }
+    }
+
+     private String byteArrayToString(byte[] data){
+       String result="";
+       for (int i=0; i< data.length; i++) {
+          result = result + String.valueOf(data[i]) + " ";
+       }
+       return result;
     }
 
 

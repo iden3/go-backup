@@ -12,56 +12,71 @@ import (
 )
 
 type Share struct {
-   Px   int
-   Py   []byte
+	Px int
+	Py []byte
 }
 
 type Shares struct {
-   Data []Share
+	Data []Share
 }
 
 type Secret struct {
-    secret.Shamir   
+	secret.Shamir
+}
+
+func GetNShares() int {
+	shares := GetShares()
+	return len(shares.Data)
+}
+
+func GetShare(n int) *Share {
+	shares := GetShares()
+	if n < len(shares.Data) {
+		return &shares.Data[n]
+	} else {
+		return nil
+	}
 }
 
 // Generate shares from secret
 func GenerateShares(secret []byte) {
 	// convert secret to right format
-	secret_ff, _  := ff.NewElement(PRIME)
+	secret_ff, _ := ff.NewElement(PRIME)
 	secret_ff.FromByte(secret)
-        secret_cfg := GetSecretCfg()
-	shares_go, _  := secret_cfg.GenerateShares(secret_ff)
-        shares_mobile := GetShares()
-        shares_mobile.Data = fromShares(shares_go)
-        SetShares(shares_mobile)
+	secret_cfg := GetSecretCfg()
+	shares_go, _ := secret_cfg.GenerateShares(secret_ff)
+	shares_mobile := GetShares()
+	shares_mobile.Data = fromShares(shares_go)
+	SetShares(shares_mobile)
 }
 
 func toShares(shares *Shares) []secret.Share {
-   shares_go := make([]secret.Share, 0)
-   secret_config := GetSecretCfg()
-   for _, share := range shares.Data {
-      new_el, _ := ff.NewElement(secret_config.GetElType())
-      new_share_go := secret.Share{ Px : share.Px,
-                                    Py : new_el.FromByte(share.Py) }
-      shares_go = append(shares_go, new_share_go)
-   }
+	shares_go := make([]secret.Share, 0)
+	secret_config := GetSecretCfg()
+	for _, share := range shares.Data {
+		new_el, _ := ff.NewElement(secret_config.GetElType())
+		new_share_go := secret.Share{Px: share.Px,
+			Py: new_el.FromByte(share.Py)}
+		shares_go = append(shares_go, new_share_go)
+	}
 
-   return shares_go
+	return shares_go
 }
 
 func fromShares(shares []secret.Share) []Share {
-        shares_mobile := make([]Share, 0)
-        for _, share  := range shares {
-            new_share_mobile := Share{  Px : share.Px,
-                                        Py : share.Py.ToByte() }
-            shares_mobile = append(shares_mobile, new_share_mobile)
-        }
-        return shares_mobile
+	shares_mobile := make([]Share, 0)
+	for _, share := range shares {
+		new_share_mobile := Share{Px: share.Px,
+			Py: share.Py.ToByte()}
+		shares_mobile = append(shares_mobile, new_share_mobile)
+	}
+	return shares_mobile
 }
+
 // Generate secret from shares
 func GenerateKey() []byte {
-   shares_go := toShares(GetShares())
-   return generateKey(shares_go, GetSecretCfg())
+	shares_go := toShares(GetShares())
+	return generateKey(shares_go, GetSecretCfg())
 }
 
 func generateKey(shares []secret.Share, sharing_cfg secret.SecretSharer) []byte {
@@ -81,17 +96,17 @@ func generateKey(shares []secret.Share, sharing_cfg secret.SecretSharer) []byte 
 }
 
 func InitSecretCfg() {
-        var secret_cfg Secret
+	var secret_cfg Secret
 	err := secret_cfg.NewConfig(MIN_N_SHARES, MAX_N_SHARES, PRIME)
 	if err != nil {
 		panic(err)
 	}
-        SetSecretCfg(&secret_cfg)
+	SetSecretCfg(&secret_cfg)
 }
 
 func InitSecretShares() {
-    var shares Shares
-    share_data := make([]Share, 0)
-    shares.Data = share_data
-    SetShares(&shares)
+	var shares Shares
+	share_data := make([]Share, 0)
+	shares.Data = share_data
+	SetShares(&shares)
 }

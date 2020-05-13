@@ -6,11 +6,11 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
-	"io/ioutil"
-	"os"
 	"github.com/iden3/go-backup/ff"
 	fc "github.com/iden3/go-backup/filecrypt"
 	"github.com/iden3/go-backup/secret"
+	"io/ioutil"
+	"os"
 )
 
 // Types of data we can include in the backup. Needed to register the data strcuture
@@ -23,14 +23,14 @@ const (
 	GENID
 	SSHARING
 	SHARES
-        NTYPES
+	NTYPES
 	// Add other possible data types that we need encoding
 )
 
-func InitEncoding(){
-  for i:= CLAIMS; i < NTYPES; i++ {
-      encodeType(i)
-  }
+func InitEncoding() {
+	for i := CLAIMS; i < NTYPES; i++ {
+		encodeType(i)
+	}
 }
 
 // Register data strucrure
@@ -147,92 +147,91 @@ func encodeShare(shares []secret.Share, fname string) {
 
 // Decode and decrypt file using provided key
 func DecodeUnencrypted(fname string) error {
-   info := decode(fname, nil)
+	info := decode(fname, nil)
 
-   rx_custodians := retrieveCustodians(info)
+	rx_custodians := retrieveCustodians(info)
 
-   if rx_custodians == nil{
-      return errors.New("Invalid Custodian Format")
-   } else {
-      InitCustodians()
-      custodians := GetCustodians()
-      custodians.Data = rx_custodians
-      SetCustodians(custodians)
-   }
+	if rx_custodians == nil {
+		return errors.New("Invalid Custodian Format")
+	} else {
+		InitCustodians()
+		custodians := GetCustodians()
+		custodians.Data = rx_custodians
+		SetCustodians(custodians)
+	}
 
+	rx_secret_cfg := retrieveSSharing(info)
 
+	if rx_secret_cfg == nil {
+		return errors.New("Invalid Secret Sharing Format")
+	} else {
+		InitSecretCfg()
+		secret_cfg := GetSecretCfg()
+		secret_cfg.Min_shares = rx_secret_cfg.GetMinShares()
+		secret_cfg.Max_shares = rx_secret_cfg.GetMaxShares()
+		secret_cfg.Element_type = rx_secret_cfg.GetElType()
+		SetSecretCfg(secret_cfg)
+	}
+	rx_ID := retrieveID(info)
+	if rx_ID == nil {
+		return errors.New("Invalid ID")
+	} else {
+		SetId(rx_ID)
+	}
 
-   rx_secret_cfg := retrieveSSharing(info)
-
-   if rx_secret_cfg == nil{
-      return errors.New("Invalid Secret Sharing Format")
-   } else {
-       InitSecretCfg()
-       secret_cfg := GetSecretCfg()
-       secret_cfg.Min_shares = rx_secret_cfg.GetMinShares()
-       secret_cfg.Max_shares = rx_secret_cfg.GetMaxShares()
-       secret_cfg.Element_type = rx_secret_cfg.GetElType()
-       SetSecretCfg(secret_cfg)
-   }
-   rx_ID := retrieveID(info)
-   if rx_ID == nil{
-      return errors.New("Invalid ID")
-   } else {
-     SetId(rx_ID)
-   }
-
-   return nil
+	return nil
 }
 
-func DecodeEncrypted(fname string, key []byte) error {
-   info := decode(fname, key)
+func DecodeEncrypted(fname string) error {
+	key := GetkOp()
+	info := decode(fname, key)
 
-   retrieved_claims := retrieveClaims(info)
-   if retrieved_claims == nil {
-      return errors.New("Invalid Claims Format")
-   } else {
-     SetBackupClaims(retrieved_claims)
-   }
+	retrieved_claims := retrieveClaims(info)
+	if retrieved_claims == nil {
+		return errors.New("Invalid Claims Format")
+	} else {
+		SetBackupClaims(retrieved_claims)
+	}
 
-   retrieved_wallet := retrieveWallet(info)
-   if retrieved_wallet == nil {
-      return errors.New("Invalid Wallet Format")
-   } else {
-     SetWallet(retrieved_wallet)
-   }
+	retrieved_wallet := retrieveWallet(info)
+	if retrieved_wallet == nil {
+		return errors.New("Invalid Wallet Format")
+	} else {
+		SetWallet(retrieved_wallet)
+	}
 
-   retrieved_mt := retrieveMT(info)
-   if retrieved_mt == nil {
-      return errors.New("Invalid MT Format")
-   } else {
-     SetMT(retrieved_mt)
-   }
+	retrieved_mt := retrieveMT(info)
+	if retrieved_mt == nil {
+		return errors.New("Invalid MT Format")
+	} else {
+		SetMT(retrieved_mt)
+	}
 
-   retrieved_shares := retrieveShares(info)
-   if retrieved_shares == nil {
-      return errors.New("Invalid shares Format")
-   } else {
-     shares := GetShares()
-     shares.Data = fromShares(retrieved_shares)
-     SetShares(shares)
-   }
+	retrieved_shares := retrieveShares(info)
+	if retrieved_shares == nil {
+		return errors.New("Invalid shares Format")
+	} else {
+		shares := GetShares()
+		shares.Data = fromShares(retrieved_shares)
+		SetShares(shares)
+	}
 
-   retrieved_zkp := retrieveZKP(info)
-   if retrieved_zkp == nil {
-      return errors.New("Invalid ZKP Format")
-   } else {
-     SetZKP(retrieved_zkp)
-   }
+	retrieved_zkp := retrieveZKP(info)
+	if retrieved_zkp == nil {
+		return errors.New("Invalid ZKP Format")
+	} else {
+		SetZKP(retrieved_zkp)
+	}
 
-   return nil
+	return nil
 
 }
 
 // Decode and decrypt file using provided key
-func decode(fname string, key []byte) []interface{}  {
+func decode(fname string, key []byte) []interface{} {
 	results, _ := fc.Decrypt(fname, key)
 
-        return results
+	return results
 
 }
 
@@ -243,12 +242,12 @@ func retrieveCustodians(info []interface{}) []Custodian {
 	var r []Custodian
 	for _, el := range info {
 		switch el.(type) {
-		        case []Custodian:
-			    r = el.([]Custodian)
-	 		    return r
-		        case *Custodians:
-                            r1 := el.(*Custodians)
-			    return r1.Data
+		case []Custodian:
+			r = el.([]Custodian)
+			return r
+		case *Custodians:
+			r1 := el.(*Custodians)
+			return r1.Data
 		}
 	}
 	return nil
@@ -348,4 +347,3 @@ func retrieveShares(info []interface{}) []secret.Share {
 	}
 	return nil
 }
-

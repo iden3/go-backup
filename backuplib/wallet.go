@@ -33,7 +33,3 @@ func initWalletConfig() *WalletConfig {
 	}
 	return &data
 }
-
-
-
-
