@@ -19,3 +19,4 @@ go-backup
 *.bk
 *.dat
 *.swp*
+*.png

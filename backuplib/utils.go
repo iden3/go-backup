@@ -7,26 +7,12 @@
 package backuplib
 
 import (
-	"bufio"
-	"bytes"
-	crand "crypto/rand"
-	"encoding/gob"
-	"errors"
-	"image"
-	_ "image/jpeg"
-	_ "image/png"
-	"io"
-	"io/ioutil"
-	"math/rand"
-	"os"
-	"path/filepath"
 	"reflect"
-
+	crand "crypto/rand"
+	"io"
 	"github.com/iden3/go-backup/ff"
-	fc "github.com/iden3/go-backup/filecrypt"
 	"github.com/iden3/go-backup/secret"
-	qrdec "github.com/liyue201/goqr"
-	qrgen "github.com/skip2/go-qrcode"
+	fc "github.com/iden3/go-backup/filecrypt"
 )
 
 // Configuration constants
@@ -36,554 +22,158 @@ const (
 	MIN_N_SHARES   = 4
 	MAX_N_SHARES   = 10
 	PRIME          = ff.FF_BN256_PRIME
-	BACKUP_DIR     = "./testdata/"
-	BACKUP_FILE    = "backup.bk"
-	QR_DIR         = "./testdata/"
+	BACKUP_DIR     = "../testdata/"
+	BACKUP_FILE    = "../testdata/backup.bk"
+	QR_DIR         = "../testdata/"
 	PBKDF2_NITER   = 60000
 	PBKDF2_SALTLEN = 12
+        PBKDF2_KEY     = fc.FC_KEY_T_PBKDF2
+        SHA256_HASH    = fc.FC_HASH_SHA256
+        GCM_ENCRYPTION = fc.FC_GCM
 )
 
-var Wallet *WalletConfig
 
-// Auxiliary information emulating Wallet Config
-// Struxture and contents are not important. Just deinfing some arbitrary data structures
-// to do backup
-type WalletConfig struct {
-	Config map[string][]byte
+type BackupData struct{
+   iD               []byte
+   kOp              []byte
+   Wallet           *WalletConfig
+   Claims           *Claim
+   ZKPData          *ZKP
+   MerkleTree       *MT
+   SecretShares     *Shares
+   Secret_cfg       *secret.Shamir
+   SecretCustodians *Custodians
 }
 
-// Dummy data init functions
-func initClaims() *Claim {
-	var test_data Claim
-	for i := 0; i < N_ELEMENTS; i++ {
-		test_data.Data[i] = uint64(rand.Intn(1234567)) //1234567123453
-	}
-	return &test_data
+var DataBackup BackupData
+
+func GetId() []byte {
+   return DataBackup.iD
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
+func SetId(iD []byte) {
+   DataBackup.iD = iD
 }
 
-func initWalletConfig() *WalletConfig {
-	var data WalletConfig
-	data.Config = make(map[string][]byte)
-	for i := 0; i < N_ELEMENTS; i++ {
-		st := randStringBytes(13)
-		data.Config[st], _ = genRandomBytes((i % 14) + 1)
-	}
-	return &data
+func GetkOp() []byte {
+    return DataBackup.kOp
 }
 
-func initZKP() *ZKP {
-	var zkp ZKP
-	zkp.R = initClaims()
-	zkp.L = initWalletConfig()
-
-	return &zkp
+func SetkOp(kOp []byte) {
+   DataBackup.kOp = kOp 
 }
 
-func initMerkleTree() *MT {
-	var mt MT
-	for i := 0; i < N_ELEMENTS; i++ {
-		mt.Y[i] = initClaims()
-	}
-
-	return &mt
+func GetWallet() *WalletConfig {
+   return DataBackup.Wallet
 }
 
-///// Secret Sharing Wrapper
-// Utility functions to convert between types.
-// secret sharing package needs to be improved to
-// support more convenient data types and avoid so much conversion
-
-var Secret_cfg secret.Shamir
-
-// Generate shares from secret
-func GenerateShares(secret []byte) []secret.Share {
-	// convert secret to right format
-	secret_ff, _ := ff.NewElement(PRIME)
-	secret_ff.FromByte(secret)
-	new_shares, _ := Secret_cfg.GenerateShares(secret_ff)
-
-	return new_shares
-
+func SetWallet(data *WalletConfig){
+  DataBackup.Wallet = data
 }
 
-// Generate secret from shares
-func GenerateKey(shares []secret.Share, sharing_cfg secret.SecretSharer) []byte {
-	shares_pool := make([]secret.Share, 0)
-	for _, share := range shares {
-		shares_pool = append(shares_pool, share)
-		if len(shares_pool) == sharing_cfg.GetMinShares() {
-			break
-		}
-	}
-	secret, err := sharing_cfg.GenerateSecret(shares_pool)
-	if err != nil {
-		panic(err)
-	}
-
-	return secret.ToByte()
+func GetBackupClaims() *Claim {
+   return DataBackup.Claims
 }
 
-//////
-// Custodian
-
-// Simplified custodian version. Holds nickname and number of keys stored. We keep a copy
-// of Custodian in backup so that we remember to whom we distributed key shares and can reclaim
-// them later on.
-
-// Attempts to emulate how we could exchage shares. QR and NONE  the only one working in this demo
-const (
-	EMAIL = iota
-	PHONE
-	TELEGRAM
-	QR   // Generate QR
-	NONE // send raw data directly
-)
-
-type Custodian struct {
-	Nickname string
-	N_shares int // number of shares provided
-	Fname    string
+func SetBackupClaims(data *Claim){
+  DataBackup.Claims = data
 }
 
-var Custodians []Custodian
-
-// Add new Custodian and simulate the distribution of N shares
-func AddCustodian(nickname string, method int, shares []secret.Share, start_idx, nshares int) error {
-	// add info to custodian
-	new_custodian := Custodian{
-		Nickname: nickname,
-		N_shares: nshares,
-	}
-
-	// encode share information to stream of bytes.
-	shares_array := make([]secret.Share, 0)
-	shares_array = append(shares_array, shares[start_idx:start_idx+nshares]...)
-
-	// generate QR
-	if method == QR {
-		share_string := encodeShareToString(shares_array)
-		qrfile := QR_DIR + "qr-" + nickname + ".png"
-		new_custodian.Fname = qrfile
-		err := qrgen.WriteFile(share_string, qrgen.High, 256, qrfile)
-		if err == nil {
-			Custodians = append(Custodians, new_custodian)
-		}
-		return err
-
-		// generate Raw data
-	} else if method == NONE {
-		share_bytes := encodeShareToByte(shares_array)
-		fname := QR_DIR + "byte-" + nickname + ".dat"
-		new_custodian.Fname = fname
-		file, _ := os.Create(fname)
-		file.Write(share_bytes)
-		file.Close()
-		Custodians = append(Custodians, new_custodian)
-		return nil
-
-	} else {
-		return errors.New("Invalid Method to distriburt Shares")
-	}
+func GetZKP() *ZKP {
+   return DataBackup.ZKPData
 }
 
-// Decode QR that includes a share, and return it a slice of maps with the index and the share
-func ScanQRShare(cust *Custodian) []secret.Share {
-	var tmp_fname string
-	if filepath.Ext(cust.Fname) == ".png" {
-		tmp_fname = QR_DIR + "tmp_f"
-		imgdata, err := ioutil.ReadFile(cust.Fname)
-		if err != nil {
-			panic(err)
-		}
-
-		img, _, err := image.Decode(bytes.NewReader(imgdata))
-		if err != nil {
-			panic(err)
-		}
-		qrCodes, err := qrdec.Recognize(img)
-		if err != nil {
-			panic(err)
-		}
-		file, err := os.Create(tmp_fname)
-		if err != nil {
-			panic(err)
-		}
-		file.Write(qrCodes[0].Payload)
-		file.Close()
-
-	} else {
-		tmp_fname = cust.Fname
-	}
-
-	// tmp_fname is a file including the encoded share.
-	qrinfo := Decode(tmp_fname, nil)
-
-	share := RetrieveShares(qrinfo)
-	return share
+func SetZKP(data *ZKP){
+  DataBackup.ZKPData = data
 }
 
-///// Encoding Layer
-
-// Types of data we can include in the backup. Needed to register the data strcuture
-const (
-	CLAIMS = iota
-	WALLET_CONFIG
-	ZKP_INFO
-	MERKLE_TREE
-	CUSTODIAN
-	GENID
-	SSHARING
-	SHARES
-	// Add other possible data types that we need encoding
-)
-
-// Register data strucrure
-func encodeType(dtype int) {
-	switch dtype {
-	case CLAIMS:
-		gob.Register(&Claim{})
-
-	case WALLET_CONFIG:
-		gob.Register(&WalletConfig{})
-
-	case ZKP_INFO:
-		gob.Register(&ZKP{})
-
-	case MERKLE_TREE:
-		gob.Register(&MT{})
-
-	case CUSTODIAN:
-		gob.Register(&Custodian{})
-		var el []Custodian
-		gob.Register(el)
-
-	case GENID:
-		var el []byte
-		gob.Register(el)
-
-	case SSHARING:
-		gob.Register(&secret.Shamir{})
-
-	case SHARES:
-		el1, _ := ff.NewElement(PRIME)
-		var el2 secret.Share
-		var el3 []secret.Share
-		gob.Register(el1)
-		gob.Register(el2)
-		gob.Register(el3)
-	}
+func GetMT() *MT {
+   return DataBackup.MerkleTree
 }
 
-// Transform share encoding to string
-func encodeShareToString(shares []secret.Share) string {
-	tmp_fname := QR_DIR + "share-tmp.dat"
-	encodeShare(shares)
-	defer os.Remove(tmp_fname)
-
-	// Read file with share as as a bytestream and convert it to string
-	share_bytes, err := ioutil.ReadFile(tmp_fname)
-	if err != nil {
-		panic(err)
-	}
-	share_string := string(share_bytes)
-
-	return share_string
+func SetMT(data *MT){
+  DataBackup.MerkleTree = data
 }
 
-// Transform share encoding to []byte
-func encodeShareToByte(shares []secret.Share) []byte {
-	tmp_fname := QR_DIR + "share-tmp.dat"
-	encodeShare(shares)
-	defer os.Remove(tmp_fname)
-	data := readBinaryFile(tmp_fname)
-
-	return data
+func GetShares() *Shares {
+    return DataBackup.SecretShares
 }
 
-// Read file
-func readBinaryFile(tmp_fname string) []byte {
-	file, err := os.Open(tmp_fname)
-	defer file.Close()
-
-	if err != nil {
-		panic(err)
-	}
-
-	stats, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-
-	var size int64 = stats.Size()
-	bytes := make([]byte, size)
-
-	bufr := bufio.NewReader(file)
-	_, err = bufr.Read(bytes)
-
-	return bytes
+func SetShares(data *Shares) {
+    DataBackup.SecretShares = data
 }
 
-// Generate share blocks to distribure via secret sharing and return
-// filecrpyt bytestream
-func encodeShare(shares []secret.Share) {
-	encodeType(SHARES)
-
-	// Key header -> no key
-	hdr_k := &fc.NoKeyFc{}
-	err := hdr_k.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
-	if err != nil {
-		panic(err)
-	}
-	// Encryption header -> not encrypted
-	hdr_e := &fc.ClearFc{}
-	err = hdr_e.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
-		fc.FC_BSIZE_BYTES_256, fc.FC_HDR_BIDX_SINGLE)
-	if err != nil {
-		panic(err)
-	}
-	// filecrypt only outputs a file. At some point, functionality should be extended
-	// to also generate a string
-	tmp_fname := QR_DIR + "share-tmp.dat"
-
-	err = fc.Encrypt(hdr_k, hdr_e, tmp_fname, shares)
-	if err != nil {
-		panic(err)
-	}
+//func GetSecretCfg()  *secret.Shamir {
+func GetSecretCfg()  *Secret {
+    secret_cfg := Secret{
+                          secret.Shamir{
+                                     Max_shares : DataBackup.Secret_cfg.GetMaxShares(),
+                                     Min_shares : DataBackup.Secret_cfg.GetMinShares(),
+                                     Element_type :DataBackup.Secret_cfg.GetElType(), 
+                                       },
+                         }
+    return &secret_cfg
+}
+func GetSecretCfgOriginal()  *secret.Shamir {
+    return  DataBackup.Secret_cfg
 }
 
-// Decode and decrypt file using provided key
-func Decode(fname string, key []byte) []interface{} {
-	results, _ := fc.Decrypt(fname, key)
-	return results
+//func SetSecretCfg(data *secret.Shamir) {
+func SetSecretCfg(data *Secret) {
+    if data != nil {
+       secret_cfg := secret.Shamir{
+                                 Max_shares : data.GetMaxShares(),
+                                 Min_shares : data.GetMinShares(),
+                                 Element_type  :data.GetElType(),
+                                }
+       DataBackup.Secret_cfg = &secret_cfg
+    } else {
+       DataBackup.Secret_cfg = nil
+    }
 }
 
-// Retrieve functions return a specific data type from a generic type
-
-// retrieve Custodian data structure
-func RetrieveCustodians(info []interface{}) []Custodian {
-	var r []Custodian
-	for _, el := range info {
-		switch el.(type) {
-		case []Custodian:
-			r = el.([]Custodian)
-			return r
-		}
-	}
-	return nil
+func GetCustodians()  *Custodians {
+    return DataBackup.SecretCustodians
 }
 
-// retrieve Secret Sharing config data structure
-func RetrieveSSharing(info []interface{}) secret.SecretSharer {
-	var r secret.SecretSharer
-	for _, el := range info {
-		switch el.(type) {
-		case *secret.Shamir:
-			r = el.(*secret.Shamir)
-			return r
-		}
-	}
-	return nil
+func SetCustodians(data *Custodians) {
+    DataBackup.SecretCustodians = data
 }
 
-// Retrieve Genesis ID
-func RetrieveID(info []interface{}) []byte {
-	var r []byte
-	for _, el := range info {
-		switch el.(type) {
-		case []byte:
-			r = el.([]byte)
-			return r
-		}
-	}
-	return nil
 
-}
-
-// Retrieve Claim data structure
-func RetrieveClaims(info []interface{}) *Claim {
-	var r *Claim
-	for _, el := range info {
-		switch el.(type) {
-		case *Claim:
-			r = el.(*Claim)
-			return r
-		}
-	}
-	return nil
-}
-
-// Retreive wallet config
-func RetrieveWallet(info []interface{}) *WalletConfig {
-	var r *WalletConfig
-	for _, el := range info {
-		switch el.(type) {
-		case *WalletConfig:
-			r = el.(*WalletConfig)
-			return r
-		}
-	}
-	return nil
-}
-
-// retreive ZKP data
-func RetrieveZKP(info []interface{}) *ZKP {
-	var r *ZKP
-	for _, el := range info {
-		switch el.(type) {
-		case *ZKP:
-			r = el.(*ZKP)
-			return r
-		}
-	}
-	return nil
-}
-
-// Retrieve MT data structure
-func RetrieveMT(info []interface{}) *MT {
-	var r *MT
-	for _, el := range info {
-		switch el.(type) {
-		case *MT:
-			r = el.(*MT)
-			return r
-		}
-	}
-	return nil
-}
-
-// Retrieve shares data structure
-func RetrieveShares(info []interface{}) []secret.Share {
-	r := make([]secret.Share, 0)
-	for _, el := range info {
-		switch el.(type) {
-		case []secret.Share:
-			r = el.([]secret.Share)
-			return r
-		case secret.Share:
-			r = append(r, el.(secret.Share))
-			return r
-		}
-	}
-	return nil
-}
-
-// Backup layer
-/////  Backup Layer
-
-const (
-	ENCRYPT = iota
-	DONT_ENCRYPT
-)
-
-type Backup struct {
-	data interface{}
-	mode int
-}
-
-// Summary of contents of backup file
-var backup_registry map[int]Backup
-
-// Record and register backup data structures
-func AddToBackup(t int, d interface{}, action int) {
-	// check for duplicates
-	for idx, _ := range backup_registry {
-		if idx == t {
-			return
-		}
-	}
-	// encode type
-	encodeType(t)
-
-	// Add to backup registry
-	backup_el := Backup{data: d,
-		mode: action,
-	}
-	backup_registry[t] = backup_el
-}
-
-// Generate backup file
-func CreateBackup(key_t, hash_t, enc_t int, fname string, key []byte) {
-	// Add Key -> for now, only PBKDF2 + GCM supported, but it can be expanded easily
-	//  Assume fixed PBKDF2 config. Header shared for both encrypted and non encrpyted blocks
-	hdr_k := &fc.Pbkdf2Fc{}
-	err := hdr_k.FillHdr(fc.FC_HDR_VERSION_1, key_t, hash_t,
-		PBKDF2_NITER, fc.FC_BSIZE_BYTES_256, PBKDF2_SALTLEN, key)
-	if err != nil {
-		panic(err)
-	}
-
-	n_blocks := len(backup_registry)
-	var block_idx, bctr = 0, 0
-
-	// There are two types of blcks defined for now:
-	// Encrypted -> PBKDF2 Key Header + GCM Enc Header
-	// Not Encrypted -> PBKDF2 Key HEader + ClearFC Enc Header
-	for _, el := range backup_registry {
-		// Check block index
-		if n_blocks == 1 {
-			block_idx = fc.FC_HDR_BIDX_SINGLE
-		} else if n_blocks == bctr+1 {
-			block_idx = fc.FC_HDR_BIDX_LAST
-		} else if bctr == 0 {
-			block_idx = fc.FC_HDR_BIDX_FIRST
-		} else {
-			block_idx = fc.FC_HDR_BIDX_MID
-		}
-
-		// Add Enc Header
-		if el.mode == DONT_ENCRYPT {
-			hdr_ne := &fc.ClearFc{}
-			err = hdr_ne.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR, fc.FC_BSIZE_BYTES_256, block_idx)
-			err = fc.Encrypt(hdr_k, hdr_ne, BACKUP_DIR+BACKUP_FILE, el.data)
-		} else if el.mode == ENCRYPT {
-			hdr_gcm := &fc.GcmFc{}
-			err = hdr_gcm.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_GCM, fc.FC_BSIZE_BYTES_256, block_idx)
-			err = fc.Encrypt(hdr_k, hdr_gcm, BACKUP_DIR+BACKUP_FILE, el.data)
-		}
-		if err != nil {
-			panic(err)
-		}
-		bctr += 1
-	}
-}
-
-/////  Aux
-// Generate N random bytes.
-func genRandomBytes(noncesize int) ([]byte, error) {
-	nonce := make([]byte, noncesize)
-	if _, err := io.ReadFull(crand.Reader, nonce); err != nil {
-		return nil, err
-	}
-	return nonce, nil
-}
 
 ////
 func init() {
+     Init()
+}
+
+func Init(){
 	//init aux data
 	Claims = initClaims()
-	Wallet = initWalletConfig()
 	ZKPData = initZKP()
 	MerkleTree = initMerkleTree()
 
+        // init aux data in backup structure
+        SetBackupClaims(Claims)
+        SetWallet(initWalletConfig())
+        SetZKP(ZKPData)
+        SetMT(MerkleTree)
+
 	// init Secret Sharing
-	err := Secret_cfg.NewConfig(MIN_N_SHARES, MAX_N_SHARES, PRIME)
-	if err != nil {
-		panic(err)
-	}
-	backup_registry = make(map[int]Backup)
+        InitSecretCfg()
 
+        // init Secret Shares
+        InitSecretShares()
+
+        // init backup registry
+        InitBackup()
+
+        // init Encoding
+        InitEncoding()
+
+        // init Custodians
+        InitCustodians()
 }
-
 func CheckEqual(expected, obtained interface{}) bool {
 	flag := false
 
@@ -596,4 +186,12 @@ func CheckEqual(expected, obtained interface{}) bool {
 		flag = reflect.DeepEqual(expected, obtained)
 	}
 	return flag
+}
+
+func genRandomBytes(noncesize int) ([]byte, error) {
+	nonce := make([]byte, noncesize)
+	if _, err := io.ReadFull(crand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	return nonce, nil
 }

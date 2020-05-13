@@ -10,6 +10,7 @@ type Share struct {
    Py   ff.Element
 }
 
+
 // Interface to describe Secret Sharing :
 type SecretSharer interface {
     GenerateSecret(shares []Share)    (ff.Element, error) 
