@@ -3,54 +3,49 @@ package backuplib
 import (
 	"fmt"
 	fc "github.com/iden3/go-backup/filecrypt"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/keystore"
+	"os"
 	"testing"
-	//"github.com/iden3/go-backup/secret"
 )
 
-var old_Id, old_kOp []byte
+var old_kOp []byte
 var old_Wallet WalletConfig
-var old_Claims Claim
-var old_ZKP ZKP
-var old_MT MT
 var old_Shares Shares
 var old_SecretCfg Secret
 var old_Custodians Custodians
+var old_PK PrivateKeys
+var old_Storage []db.KV
 
 func copyBackupData() {
-	old_Id = GetId()
 	old_kOp = GetkOp()
 	old_Wallet = *GetWallet()
-	old_Claims = *GetBackupClaims()
-	old_ZKP = *GetZKP()
-	old_MT = *GetMT()
 	old_Shares = *GetShares()
 	old_SecretCfg = *GetSecretCfg()
 	old_Custodians = *GetCustodians()
+	old_PK = *GetPrivateKeys()
+	old_Storage = GetStorage()
 }
 
 func deleteBackupData() {
-	SetId(nil)
 	SetkOp(nil)
 	SetWallet(nil)
-	SetBackupClaims(nil)
-	SetZKP(nil)
-	SetMT(nil)
 	SetShares(nil)
 	SetSecretCfg(nil)
 	SetCustodians(nil)
+	SetPrivateKeys(nil)
+	SetStorage(nil)
 
 }
 
 func TestBackup(t *testing.T) {
-
-	// Generates Main Key from BN256. This is our Identity operational Key. I am assuming
+	// Generates Key. This is our Identity operational Key. I am assuming
 	// that the operational key is the one that enables us to regain the identity.
 	kOp := KeyOperational()
 	SetkOp(kOp)
 
-	// Retrieve Genesis ID -> Not really needed
-	iD := NewID()
-	SetId(iD)
+	// Create identity and initialize modules
+	Init(kOp, "")
 
 	// Generate Shares of our operational Key
 	GenerateShares(kOp)
@@ -79,24 +74,19 @@ func TestBackup(t *testing.T) {
 	// now. It is just to show how easy it is to build the backup file.
 	// At this point, the buildup is static (I need to have a switch case in AddToBackup with all possible
 	// data stucture types that can be added to the backup, but there should be a more dynamic way...)
-	// Add Rx Claims
-	AddToBackup(CLAIMS, ENCRYPT)
 	// Add wallet configuration
 	AddToBackup(WALLET_CONFIG, ENCRYPT)
-	// Add generated ZKP
-	AddToBackup(ZKP_INFO, ENCRYPT)
-	// Add Merkle Tree -> If we haven't created any claims, we don't need to store
-	// Merkle Tree because we could regenerate it
-	AddToBackup(MERKLE_TREE, ENCRYPT)
 	// Add Custodian information (contact details) -> unencrypted
 	AddToBackup(CUSTODIAN, DONT_ENCRYPT)
-	// Add Genesis ID) -> unencrypted
-	AddToBackup(GENID, DONT_ENCRYPT)
 	// Add SSharing info. We need Prime number and protocol used (Shamir) -> unencrypted
 	AddToBackup(SSHARING, DONT_ENCRYPT)
 	// Add Shares. We heed to keep a list of at least outstanding shares in case
 	//  we want to redistribute in the future. in this example I keep all for simplicity.
 	AddToBackup(SHARES, ENCRYPT)
+	// Add KeyStore
+	AddToBackup(PKEYS, ENCRYPT)
+	// Add Storage
+	AddToBackup(STORAGE, ENCRYPT)
 
 	// Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
 	//  for encrypted sections. Also not, that we can mix encrypted and non-encrpyted information in the
@@ -110,7 +100,7 @@ func TestBackup(t *testing.T) {
 }
 
 func TestRestore(t *testing.T) {
-	Init()
+	Init(nil, "")
 
 	// Decode unencrypted backup file as it may contain some info
 	// (custodian contact info, genesis id, sharing)
@@ -121,7 +111,7 @@ func TestRestore(t *testing.T) {
 		t.Error(err)
 	}
 
-	res := CheckEqual(old_Custodians, *GetCustodians())
+	res := checkEqual(old_Custodians, *GetCustodians())
 	if res {
 		fmt.Println("Retrieved Custodians .... OK")
 	} else {
@@ -130,20 +120,12 @@ func TestRestore(t *testing.T) {
 
 	// Retreive sharing info -> Finite Field information and protocol (Shamir's secret sharing) required to
 	//    regenerate the KEY. It is unencrypted
-	res = CheckEqual(old_SecretCfg, *GetSecretCfg())
+	res = checkEqual(old_SecretCfg, *GetSecretCfg())
 	if res {
 		fmt.Println("Retrieved Sharing Conf .... OK")
 	} else {
 		fmt.Println(old_SecretCfg, *GetSecretCfg())
 		t.Error("Retrieved Sharing Conf .... KO")
-	}
-
-	// Retreive genesis ID -> Not used, but maybe in a real use case it is useful to have it available
-	res = CheckEqual(old_Id, GetId())
-	if res {
-		fmt.Println("Retrieved Genesis ID .... OK")
-	} else {
-		t.Error("Retrieved Genesis ID .... KO")
 	}
 
 	// Contact custodians and retrieve shares
@@ -160,7 +142,7 @@ func TestRestore(t *testing.T) {
 	//   Using the collected shares, regenerate Key
 	kOp := GenerateKey()
 	SetkOp(kOp)
-	res = CheckEqual(old_kOp, GetkOp())
+	res = checkEqual(old_kOp, GetkOp())
 	if res {
 		fmt.Println("Retrieved kOp .... OK")
 	} else {
@@ -174,42 +156,44 @@ func TestRestore(t *testing.T) {
 
 	// With the decrpyted and decoded information, retrieve all information we stored and check
 	// if it is equal than the original
-	res = CheckEqual(old_Claims, *GetBackupClaims())
-	if res {
-		fmt.Println("Retrieved Claims .... OK")
-	} else {
-		t.Error("Retrieved Claims .... KO")
-	}
-
-	res = CheckEqual(old_Wallet, *GetWallet())
+	res = checkEqual(old_Wallet, *GetWallet())
 	if res {
 		fmt.Println("Retrieved Wallet .... OK")
 	} else {
 		t.Error("Retrieved Wallet .... KO")
 	}
 
-	res = CheckEqual(old_MT, *GetMT())
-	if res {
-		fmt.Println("Retrieved MT .... OK")
-	} else {
-		t.Error("Retrieved MT .... KO")
-	}
-
-	res = CheckEqual(old_Shares, *GetShares())
+	res = checkEqual(old_Shares, *GetShares())
 	if res {
 		fmt.Println("Retrieved Shares .... OK")
 	} else {
 		t.Error("Retrieved Shares .... KO")
 	}
 
-	res = CheckEqual(old_ZKP, *GetZKP())
+	res = checkEqual(old_PK, *GetPrivateKeys())
 	if res {
-		fmt.Println("Retrieved ZKP .... OK")
+		fmt.Println("Retrieved Private Keys .... OK")
 	} else {
-		t.Error("Retrieved ZKP .... KO")
+		t.Error("Retrieved Private Keys .... KO")
+	}
+
+	res = checkEqual(old_Storage, GetStorage())
+	if res {
+		fmt.Println("Retrieved Storage .... OK")
+	} else {
+		t.Error("Retrieved Storage .... KO")
 	}
 
 	// Last step is to restore identity using retrieved kOp. Since we do not store any claims,
 	// we could regenerate the identiy usingt the key.
+
+	_, err = RestoreIdentity("", keystore.StandardKeyStoreParams)
+	if err != nil {
+		t.Error(err)
+	}
+
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
 
 }

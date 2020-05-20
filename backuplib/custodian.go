@@ -98,12 +98,11 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 	}
 }
 
-func InitCustodians() {
+func initCustodians() {
 	var custodians Custodians
 	custodians_data := make([]Custodian, 0)
 	custodians.Data = custodians_data
 	SetCustodians(&custodians)
-
 }
 
 func AddCustodian(nickname, folder string, method int, start_idx, nshares int) error {

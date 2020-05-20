@@ -36,7 +36,9 @@ public class MainActivity extends AppCompatActivity {
 
     // On push button, Restore Backup
     public void clickEventRestore(View v) {
-        Backuplib.init();
+        // delete backup data
+        Backuplib.init(null, folder);
+
         File f = new File(backupFile);
         long ncustodians = 0;
         if (f.exists()) {
@@ -61,8 +63,6 @@ public class MainActivity extends AppCompatActivity {
               Log.d("Backuplib", "Secret CFG - Min N Shares : "+String.valueOf(secret.getMinShares()));
               Log.d("Backuplib", "Secret CFG - Eelemt Type : "+String.valueOf(secret.getElType()));
            
-              byte[] Id = Backuplib.getId();
-              
 
           } catch (Exception e){
               Log.d("Backuplib", "Error Decode Unencrypted");
@@ -82,21 +82,10 @@ public class MainActivity extends AppCompatActivity {
 
     // On bpush button, Backup wallet
     public void clickEventBackup(View v) {
-        // Initlaize library
-        Backuplib.init();
-        // Delete old files in local storage
-        deleteOldFiles();
-       
+        Backuplib.init(null, folder);
         Intent genQR = new Intent(getApplicationContext(), ScanQr.class);
         
         startActivity(genQR);
     }
 
-    private void deleteOldFiles(){
-        File folderF =new File(folder);
-        File[] listOfFiles = folderF.listFiles();
-        for (int i=0; i < listOfFiles.length; i++){
-            listOfFiles[i].delete();
-        }
-    }
 }

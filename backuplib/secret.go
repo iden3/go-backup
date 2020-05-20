@@ -1,7 +1,7 @@
 /*
- Utility functions to convert between types.
- secret sharing package needs to be improved to
- support more convenient data types and avoid so much conversion
+
+  Secret Sharing wrapper functionality
+
 */
 
 package backuplib
@@ -95,7 +95,7 @@ func generateKey(shares []secret.Share, sharing_cfg secret.SecretSharer) []byte 
 	return secret.ToByte()
 }
 
-func InitSecretCfg() {
+func initSecretCfg() {
 	var secret_cfg Secret
 	err := secret_cfg.NewConfig(MIN_N_SHARES, MAX_N_SHARES, PRIME)
 	if err != nil {
@@ -104,7 +104,7 @@ func InitSecretCfg() {
 	SetSecretCfg(&secret_cfg)
 }
 
-func InitSecretShares() {
+func initSecretShares() {
 	var shares Shares
 	share_data := make([]Share, 0)
 	shares.Data = share_data

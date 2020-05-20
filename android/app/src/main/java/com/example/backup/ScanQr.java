@@ -32,7 +32,7 @@ public class ScanQr extends AppCompatActivity {
     String folder, backupFile;
 
     byte[] kOp;
-    byte[] iD;
+    byte[] pwd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,17 +76,21 @@ public class ScanQr extends AppCompatActivity {
         backupFile = folder+"backup.bk";
 
 
+        // Delete old files in local storage
+        deleteOldFiles();
+        pwd="my passphrase".getBytes();
+        Backuplib.init(pwd, folder);
+
         // Generate Key
-        byte[] kOp = Backuplib.keyOperational();
+        kOp = Backuplib.keyOperational();
         Backuplib.setkOp(kOp);
         String kOpString = byteArrayToString(kOp);
         Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOpString);
 
         // Generate ID
-        byte[] iD = Backuplib.newID();
-        Backuplib.setId(iD);
-        String iDString = byteArrayToString(iD);
-        Log.d("Backuplib", "iD["+String.valueOf(iD.length)+"] : " +iDString);
+        Backuplib.setPwd(pwd);
+        String pwdString = byteArrayToString(pwd);
+        Log.d("Backuplib", "pwd["+String.valueOf(pwd.length)+"] : " +pwdString);
 
         // Generate shares from key
         Backuplib.generateShares(kOp);
@@ -113,6 +117,14 @@ public class ScanQr extends AppCompatActivity {
           result = result + String.valueOf(data[i]) + " ";
        }
        return result;
+    }
+
+    private void deleteOldFiles(){
+        File folderF =new File(folder);
+        File[] listOfFiles = folderF.listFiles();
+        for (int i=0; i < listOfFiles.length; i++){
+            listOfFiles[i].delete();
+        }
     }
 
     // On push button. Gen QR from share
@@ -177,23 +189,21 @@ public class ScanQr extends AppCompatActivity {
 
         if (nshares >= minShares) {
 
-            Backuplib.addToBackup(Backuplib.CLAIMS, Backuplib.ENCRYPT);
             // Add wallet configuration
             Backuplib.addToBackup(Backuplib.WALLET_CONFIG, Backuplib.ENCRYPT);
-            // Add generated ZKP
-            Backuplib.addToBackup(Backuplib.ZKP_INFO, Backuplib.ENCRYPT);
-            // Add Merkle Tree -> If we haven't created any claims, we don't need to store
-            // Merkle Tree because we could regenerate it
-            Backuplib.addToBackup(Backuplib.MERKLE_TREE, Backuplib.ENCRYPT);
             // Add Custodian information (contact details) -> unencrypted
             Backuplib.addToBackup(Backuplib.CUSTODIAN, Backuplib.DONT_ENCRYPT);
             // Add Genesis ID) -> unencrypted
-            Backuplib.addToBackup(Backuplib.GENID, Backuplib.DONT_ENCRYPT);
+            Backuplib.addToBackup(Backuplib.PWD, Backuplib.DONT_ENCRYPT);
             // Add SSharing info. We need Prime number and protocol used (Shamir) -> unencrypted
             Backuplib.addToBackup(Backuplib.SSHARING, Backuplib.DONT_ENCRYPT);
             // Add Shares. We heed to keep a list of at least outstanding shares in case
             //  we want to redistribute in the future. in this example I keep all for simplicity.
             Backuplib.addToBackup(Backuplib.SHARES, Backuplib.ENCRYPT);
+            // Add KeyStore
+	    Backuplib.addToBackup(Backuplib.PKEYS, Backuplib.ENCRYPT);
+            // Add Storage
+	    Backuplib.addToBackup(Backuplib.STORAGE, Backuplib.ENCRYPT);
 
             // Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
             //  for encrypted sections. Also not, that we can mix encrypted and non-encrpyted information in the

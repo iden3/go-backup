@@ -1,6 +1,6 @@
 /*
    Auxiliary information emulating Wallet Config
-   Struxture and contents are not important. Just deinfing some arbitrary data structures
+   Structure and contents are not important. Just deinfing some arbitrary data structures
    to do backup
 */
 
@@ -10,6 +10,7 @@ import (
 	"math/rand"
 )
 
+// Emulated wallet structure
 type WalletConfig struct {
 	Config map[string][]byte
 }
@@ -24,6 +25,7 @@ func randStringBytes(n int) string {
 	return string(b)
 }
 
+// Init
 func initWalletConfig() *WalletConfig {
 	var data WalletConfig
 	data.Config = make(map[string][]byte)

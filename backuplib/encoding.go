@@ -9,26 +9,27 @@ import (
 	"github.com/iden3/go-backup/ff"
 	fc "github.com/iden3/go-backup/filecrypt"
 	"github.com/iden3/go-backup/secret"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"io/ioutil"
 	"os"
 )
 
 // Types of data we can include in the backup. Needed to register the data strcuture
 const (
-	CLAIMS = iota
+	START_TYPES = iota
 	WALLET_CONFIG
-	ZKP_INFO
-	MERKLE_TREE
 	CUSTODIAN
-	GENID
 	SSHARING
 	SHARES
+	PKEYS
+	STORAGE
 	NTYPES
 	// Add other possible data types that we need encoding
 )
 
-func InitEncoding() {
-	for i := CLAIMS; i < NTYPES; i++ {
+func initEncoding() {
+	for i := START_TYPES + 1; i < NTYPES; i++ {
 		encodeType(i)
 	}
 }
@@ -36,25 +37,13 @@ func InitEncoding() {
 // Register data strucrure
 func encodeType(dtype int) {
 	switch dtype {
-	case CLAIMS:
-		gob.Register(&Claim{})
 
 	case WALLET_CONFIG:
 		gob.Register(&WalletConfig{})
 
-	case ZKP_INFO:
-		gob.Register(&ZKP{})
-
-	case MERKLE_TREE:
-		gob.Register(&MT{})
-
 	case CUSTODIAN:
 		gob.Register(&Custodians{})
 		var el []Custodian
-		gob.Register(el)
-
-	case GENID:
-		var el []byte
 		gob.Register(el)
 
 	case SSHARING:
@@ -67,6 +56,19 @@ func encodeType(dtype int) {
 		gob.Register(el1)
 		gob.Register(el2)
 		gob.Register(el3)
+
+	case PKEYS:
+		var el PrivateKeys
+		var el1 *babyjub.PrivateKey
+		gob.Register(&el)
+		gob.Register(el1)
+
+	case STORAGE:
+		var el db.KV
+		var el1 []db.KV
+		gob.Register(&el)
+		gob.Register(el1)
+
 	}
 }
 
@@ -122,8 +124,6 @@ func readBinaryFile(tmp_fname string) []byte {
 // Generate share blocks to distribure via secret sharing and return
 // filecrpyt bytestream
 func encodeShare(shares []secret.Share, fname string) {
-	encodeType(SHARES)
-
 	// Key header -> no key
 	hdr_k := &fc.NoKeyFc{}
 	err := hdr_k.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
@@ -154,7 +154,7 @@ func DecodeUnencrypted(fname string) error {
 	if rx_custodians == nil {
 		return errors.New("Invalid Custodian Format")
 	} else {
-		InitCustodians()
+		initCustodians()
 		custodians := GetCustodians()
 		custodians.Data = rx_custodians
 		SetCustodians(custodians)
@@ -165,18 +165,12 @@ func DecodeUnencrypted(fname string) error {
 	if rx_secret_cfg == nil {
 		return errors.New("Invalid Secret Sharing Format")
 	} else {
-		InitSecretCfg()
+		initSecretCfg()
 		secret_cfg := GetSecretCfg()
 		secret_cfg.Min_shares = rx_secret_cfg.GetMinShares()
 		secret_cfg.Max_shares = rx_secret_cfg.GetMaxShares()
 		secret_cfg.Element_type = rx_secret_cfg.GetElType()
 		SetSecretCfg(secret_cfg)
-	}
-	rx_ID := retrieveID(info)
-	if rx_ID == nil {
-		return errors.New("Invalid ID")
-	} else {
-		SetId(rx_ID)
 	}
 
 	return nil
@@ -186,25 +180,11 @@ func DecodeEncrypted(fname string) error {
 	key := GetkOp()
 	info := decode(fname, key)
 
-	retrieved_claims := retrieveClaims(info)
-	if retrieved_claims == nil {
-		return errors.New("Invalid Claims Format")
-	} else {
-		SetBackupClaims(retrieved_claims)
-	}
-
 	retrieved_wallet := retrieveWallet(info)
 	if retrieved_wallet == nil {
 		return errors.New("Invalid Wallet Format")
 	} else {
 		SetWallet(retrieved_wallet)
-	}
-
-	retrieved_mt := retrieveMT(info)
-	if retrieved_mt == nil {
-		return errors.New("Invalid MT Format")
-	} else {
-		SetMT(retrieved_mt)
 	}
 
 	retrieved_shares := retrieveShares(info)
@@ -216,11 +196,18 @@ func DecodeEncrypted(fname string) error {
 		SetShares(shares)
 	}
 
-	retrieved_zkp := retrieveZKP(info)
-	if retrieved_zkp == nil {
-		return errors.New("Invalid ZKP Format")
+	retrieved_private_keys := retrievePrivateKeys(info)
+	if retrieved_private_keys == nil {
+		return errors.New("Invalid Private Keys Format")
 	} else {
-		SetZKP(retrieved_zkp)
+		SetPrivateKeys(retrieved_private_keys)
+	}
+
+	retrieved_storage := retrieveStorage(info)
+	if retrieved_storage == nil {
+		return errors.New("Invalid Storage Format")
+	} else {
+		SetStorage(retrieved_storage)
 	}
 
 	return nil
@@ -266,33 +253,6 @@ func retrieveSSharing(info []interface{}) secret.SecretSharer {
 	return nil
 }
 
-// Retrieve Genesis ID
-func retrieveID(info []interface{}) []byte {
-	var r []byte
-	for _, el := range info {
-		switch el.(type) {
-		case []byte:
-			r = el.([]byte)
-			return r
-		}
-	}
-	return nil
-
-}
-
-// Retrieve Claim data structure
-func retrieveClaims(info []interface{}) *Claim {
-	var r *Claim
-	for _, el := range info {
-		switch el.(type) {
-		case *Claim:
-			r = el.(*Claim)
-			return r
-		}
-	}
-	return nil
-}
-
 // Retreive wallet config
 func retrieveWallet(info []interface{}) *WalletConfig {
 	var r *WalletConfig
@@ -306,27 +266,29 @@ func retrieveWallet(info []interface{}) *WalletConfig {
 	return nil
 }
 
-// retreive ZKP data
-func retrieveZKP(info []interface{}) *ZKP {
-	var r *ZKP
+// retreive PrivateKey
+func retrievePrivateKeys(info []interface{}) *PrivateKeys {
 	for _, el := range info {
 		switch el.(type) {
-		case *ZKP:
-			r = el.(*ZKP)
+		case *PrivateKeys:
+			var r *PrivateKeys
+			r = el.(*PrivateKeys)
 			return r
+
 		}
 	}
 	return nil
 }
 
-// Retrieve MT data structure
-func retrieveMT(info []interface{}) *MT {
-	var r *MT
+// retreive Storage
+func retrieveStorage(info []interface{}) []db.KV {
 	for _, el := range info {
 		switch el.(type) {
-		case *MT:
-			r = el.(*MT)
+		case []db.KV:
+			var r []db.KV
+			r = el.([]db.KV)
 			return r
+
 		}
 	}
 	return nil

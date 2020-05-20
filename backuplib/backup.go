@@ -27,21 +27,12 @@ func AddToBackup(t, action int) {
 			return
 		}
 	}
-	// encode type
-	encodeType(t)
-
 	backup_el := newBackupElement(t, action)
 	backup_registry[t] = *backup_el
 }
 
 func newBackupElement(t, action int) *Backup {
 	switch t {
-	case CLAIMS:
-		// Add to backup registry
-		backup_el := Backup{data: GetBackupClaims(),
-			mode: action,
-		}
-		return &backup_el
 
 	case WALLET_CONFIG:
 		backup_el := Backup{data: GetWallet(),
@@ -49,26 +40,8 @@ func newBackupElement(t, action int) *Backup {
 		}
 		return &backup_el
 
-	case ZKP_INFO:
-		backup_el := Backup{data: GetZKP(),
-			mode: action,
-		}
-		return &backup_el
-
-	case MERKLE_TREE:
-		backup_el := Backup{data: GetMT(),
-			mode: action,
-		}
-		return &backup_el
-
 	case CUSTODIAN:
 		backup_el := Backup{data: GetCustodians(),
-			mode: action,
-		}
-		return &backup_el
-
-	case GENID:
-		backup_el := Backup{data: GetId(),
 			mode: action,
 		}
 		return &backup_el
@@ -85,6 +58,29 @@ func newBackupElement(t, action int) *Backup {
 		}
 		return &backup_el
 
+	case PKEYS:
+		pass := GetkOp()
+		_, keystore := id.Export(pass)
+		if keystore == nil {
+			return nil
+		}
+		keyStore2PK(keystore, pass)
+		backup_el := Backup{data: GetPrivateKeys(),
+			mode: action,
+		}
+		return &backup_el
+
+	case STORAGE:
+		pass := GetkOp()
+		storage, _ := id.Export(pass)
+		if storage == nil {
+			return nil
+		}
+		storage2KV(storage)
+		backup_el := Backup{data: GetStorage(),
+			mode: action,
+		}
+		return &backup_el
 	}
 	return nil
 }
@@ -136,6 +132,6 @@ func CreateBackup(key_t, hash_t, enc_t int, fname string) {
 	}
 }
 
-func InitBackup() {
+func initBackup() {
 	backup_registry = make(map[int]Backup)
 }
