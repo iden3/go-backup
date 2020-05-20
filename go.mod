@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/iden3/go-iden3-core v0.0.7
 	github.com/iden3/go-iden3-crypto v0.0.4
-	github.com/iden3/iden3-mobile/go v0.0.0-20200519212745-7a4d4ed5b1b8
+	github.com/iden3/iden3-mobile/go v0.0.0-20200520133806-eeafb3ac4801
 	github.com/liyue201/goqr v0.0.0-20200116030114-65015cdd3a41
 	github.com/skip2/go-qrcode v0.0.0-20191027152451-9434209cb086
 	github.com/tuotoo/qrcode v0.0.0-20190222102259-ac9c44189bf2

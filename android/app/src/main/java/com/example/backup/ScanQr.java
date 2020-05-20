@@ -87,10 +87,6 @@ public class ScanQr extends AppCompatActivity {
         String kOpString = byteArrayToString(kOp);
         Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOpString);
 
-        // Generate ID
-        Backuplib.setPwd(pwd);
-        String pwdString = byteArrayToString(pwd);
-        Log.d("Backuplib", "pwd["+String.valueOf(pwd.length)+"] : " +pwdString);
 
         // Generate shares from key
         Backuplib.generateShares(kOp);
@@ -193,8 +189,6 @@ public class ScanQr extends AppCompatActivity {
             Backuplib.addToBackup(Backuplib.WALLET_CONFIG, Backuplib.ENCRYPT);
             // Add Custodian information (contact details) -> unencrypted
             Backuplib.addToBackup(Backuplib.CUSTODIAN, Backuplib.DONT_ENCRYPT);
-            // Add Genesis ID) -> unencrypted
-            Backuplib.addToBackup(Backuplib.PWD, Backuplib.DONT_ENCRYPT);
             // Add SSharing info. We need Prime number and protocol used (Shamir) -> unencrypted
             Backuplib.addToBackup(Backuplib.SSHARING, Backuplib.DONT_ENCRYPT);
             // Add Shares. We heed to keep a list of at least outstanding shares in case

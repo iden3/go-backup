@@ -225,6 +225,12 @@ github.com/iden3/iden3-mobile/go v0.0.0-20200519212103-b53372da6bdb h1:O5PYU0Ang
 github.com/iden3/iden3-mobile/go v0.0.0-20200519212103-b53372da6bdb/go.mod h1:IN2qv8s+W/jjDA6LBBGK/49+PAJIHeXvD+br+MX7sNQ=
 github.com/iden3/iden3-mobile/go v0.0.0-20200519212745-7a4d4ed5b1b8 h1:ZBNuJiWANt/QhnVYWOztRknayV8iG43FYsptgjTDNIM=
 github.com/iden3/iden3-mobile/go v0.0.0-20200519212745-7a4d4ed5b1b8/go.mod h1:IN2qv8s+W/jjDA6LBBGK/49+PAJIHeXvD+br+MX7sNQ=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520130826-80cb80fdf84c h1:1Ax0mBQqlDsunSP9F3Pwp8vcNkXiWMTUiGLJxO2SgMA=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520130826-80cb80fdf84c/go.mod h1:IN2qv8s+W/jjDA6LBBGK/49+PAJIHeXvD+br+MX7sNQ=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520132842-9d272b7c7361 h1:gUWQJKYZmLmfLKZWd0v/QSqwm7l/jhefDp0d2tRCqAY=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520132842-9d272b7c7361/go.mod h1:IN2qv8s+W/jjDA6LBBGK/49+PAJIHeXvD+br+MX7sNQ=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520133806-eeafb3ac4801 h1:onDX/nyLwddiwQY6iP8R4abIWV9rzuBZ1A67r/2IBYw=
+github.com/iden3/iden3-mobile/go v0.0.0-20200520133806-eeafb3ac4801/go.mod h1:IN2qv8s+W/jjDA6LBBGK/49+PAJIHeXvD+br+MX7sNQ=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
 github.com/influxdata/influxdb v1.7.8/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
