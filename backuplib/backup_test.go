@@ -184,9 +184,7 @@ func TestRestore(t *testing.T) {
 		t.Error("Retrieved Storage .... KO")
 	}
 
-	// Last step is to restore identity using retrieved kOp. Since we do not store any claims,
-	// we could regenerate the identiy usingt the key.
-
+	// Last step is to restore identity
 	_, err = RestoreIdentity("", keystore.StandardKeyStoreParams)
 	if err != nil {
 		t.Error(err)

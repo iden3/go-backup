@@ -28,7 +28,7 @@ const (
 	FOLDER_STORE          = "store"
 	FOLDER_KSTORE         = "keystore"
 	KSTORE_FILE           = "/idKeyStore"
-	STORE_FILE            = "/idKeyStore"
+	STORE_FILE            = "/idStore"
 )
 
 type config struct {

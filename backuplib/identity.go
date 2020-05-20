@@ -98,6 +98,8 @@ func restoreStorage(folder string) (db.Storage, error) {
 	for _, kv := range backup_storage {
 		tx.Put(kv.K, kv.V)
 	}
+	tx.Commit()
+	sto.Close()
 
 	return sto, nil
 }
@@ -124,6 +126,7 @@ func restoreKStore(folder string, params keystore.KeyStoreParams) (*keystore.Key
 			return nil, err
 		}
 	}
+	ks.Close()
 
 	return ks, err
 }
