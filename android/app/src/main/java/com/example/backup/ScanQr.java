@@ -32,7 +32,6 @@ public class ScanQr extends AppCompatActivity {
     String folder, backupFile;
 
     byte[] kOp;
-    byte[] pwd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,14 +77,13 @@ public class ScanQr extends AppCompatActivity {
 
         // Delete old files in local storage
         deleteOldFiles();
-        pwd="my passphrase".getBytes();
-        Backuplib.init(pwd, folder);
 
         // Generate Key
         kOp = Backuplib.keyOperational();
         Backuplib.setkOp(kOp);
         String kOpString = byteArrayToString(kOp);
         Log.d("Backuplib", "kOp["+String.valueOf(kOp.length)+"] : " +kOpString);
+        Backuplib.init(kOp, folder);
 
 
         // Generate shares from key
@@ -186,17 +184,23 @@ public class ScanQr extends AppCompatActivity {
         if (nshares >= minShares) {
 
             // Add wallet configuration
+            Log.d("Backuplib", "Add WALLET_CONFIG");
             Backuplib.addToBackup(Backuplib.WALLET_CONFIG, Backuplib.ENCRYPT);
             // Add Custodian information (contact details) -> unencrypted
+            Log.d("Backuplib", "Add CUSTODIAN");
             Backuplib.addToBackup(Backuplib.CUSTODIAN, Backuplib.DONT_ENCRYPT);
             // Add SSharing info. We need Prime number and protocol used (Shamir) -> unencrypted
+            Log.d("Backuplib", "Add SSHARING");
             Backuplib.addToBackup(Backuplib.SSHARING, Backuplib.DONT_ENCRYPT);
             // Add Shares. We heed to keep a list of at least outstanding shares in case
             //  we want to redistribute in the future. in this example I keep all for simplicity.
+            Log.d("Backuplib", "Add SHARES");
             Backuplib.addToBackup(Backuplib.SHARES, Backuplib.ENCRYPT);
             // Add KeyStore
+            Log.d("Backuplib", "Add PKEYS");
 	    Backuplib.addToBackup(Backuplib.PKEYS, Backuplib.ENCRYPT);
             // Add Storage
+            Log.d("Backuplib", "Add STORAGE");
 	    Backuplib.addToBackup(Backuplib.STORAGE, Backuplib.ENCRYPT);
 
             // Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
