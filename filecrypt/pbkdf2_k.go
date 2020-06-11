@@ -18,11 +18,11 @@ import (
    version                    [ 1 Byte ] :  Header version
    keytype                    [ 1 Byte ] :
    hdrlen                     [ 1 Byte ] :
-   hash                       [ 1 Byte ] :  
-   iter                       [ 4 Byte ] :  
-   outlen                     [ 1 Byte ] :  
-   saltlen                    [ 1 Byte ] :  
-   salt                       [ 1 Byte ] :  
+   hash                       [ 1 Byte ] :
+   iter                       [ 4 Byte ] :
+   outlen                     [ 1 Byte ] :
+   saltlen                    [ 1 Byte ] :
+   salt                       [ 1 Byte ] :
    key_in
    key_out
 */

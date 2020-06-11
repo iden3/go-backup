@@ -1,11 +1,11 @@
 package filecrypt
 
 import (
+	cr "crypto/rand"
+	"crypto/rsa"
 	"encoding/gob"
 	"encoding/json"
 	"math/rand"
-	cr "crypto/rand"
-	"crypto/rsa"
 	"os"
 	"reflect"
 	"testing"
@@ -151,9 +151,9 @@ func TestFCDirectRSA(t *testing.T) {
 	gob.Register(&FCTest2{})
 
 	// init key
-        privKey, _ := rsa.GenerateKey(cr.Reader,FC_BSIZE_BYTES_2048*8)
-        publicKeyB, _ := json.Marshal(privKey.PublicKey)
-        privateKeyB, _ := json.Marshal(privKey)
+	privKey, _ := rsa.GenerateKey(cr.Reader, FC_BSIZE_BYTES_2048*8)
+	publicKeyB, _ := json.Marshal(privKey.PublicKey)
+	privateKeyB, _ := json.Marshal(privKey)
 
 	// init key hdr
 	hdr_k := &DirectKeyFc{}
@@ -207,14 +207,12 @@ func TestFCDirectRSA(t *testing.T) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 	if r2 != *test_data2 {
-	   t.Error("Encrypted and decrypted values not equal")
+		t.Error("Encrypted and decrypted values not equal")
 	}
 	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
-
-
 
 func TestFCNokeyClear(t *testing.T) {
 	// init tests data

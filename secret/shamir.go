@@ -117,7 +117,7 @@ func (cfg *Shamir) NewConfig(min_shares, max_shares, element_type int) error {
 func (s Shamir) NewSecret() ff.Element {
 	secret, _ := ff.NewElement(s.Element_type)
 	secret.SetRandom().ToMont()
-        return secret
+	return secret
 }
 
 // Generate random coefficients a[1]...a[Min_shares-1] in Montgomery belonging to Finite Field

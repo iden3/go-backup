@@ -1,36 +1,36 @@
 package filecrypt
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
-        "crypto/rand"
-        "crypto/sha256"
+	"crypto/sha256"
 	"encoding/json"
-        "errors"
+	"errors"
 )
 
 type RsaFc struct {
 	fchdr
 }
 
-// Encrypt data structure and write it/append it as bytetream to a file using RSA 
+// Encrypt data structure and write it/append it as bytetream to a file using RSA
 //   bits depending on key length
 func (hdr *RsaFc) encrypt(fname string, key []byte, cleartext interface{}) error {
-        // Recover key 
-        var publicKey rsa.PublicKey
-        err := json.Unmarshal(key, &publicKey)
-        if err != nil {
+	// Recover key
+	var publicKey rsa.PublicKey
+	err := json.Unmarshal(key, &publicKey)
+	if err != nil {
 		return err
-        }
+	}
 	// Encode cleartext to byte stream
 	bytestream, err := interfaceEncode(cleartext)
 	checkError(err)
 
-        if fc_bsize[hdr.blocksize] <= len(bytestream){
-             return errors.New("cleartext longer than key len")
-        }
+	if fc_bsize[hdr.blocksize] <= len(bytestream) {
+		return errors.New("cleartext longer than key len")
+	}
 
-	// Encrypt 
-        rng := rand.Reader
+	// Encrypt
+	rng := rand.Reader
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rng, &publicKey, bytestream, nil)
 
 	// add nblocks (including 1 block for nonce)
@@ -58,15 +58,15 @@ func (hdr *RsaFc) encrypt(fname string, key []byte, cleartext interface{}) error
 // Decrypt and authenticate file containing byte stream using RSA depending on key length.
 // Resulting bytestream is decoded and original data structure retrieved
 func (hdr RsaFc) decrypt(ciphertext, key []byte) (interface{}, error) {
-        // Recover key 
-        var privateKey rsa.PrivateKey
-        err := json.Unmarshal(key, &privateKey)
-        if err != nil {
+	// Recover key
+	var privateKey rsa.PrivateKey
+	err := json.Unmarshal(key, &privateKey)
+	if err != nil {
 		return nil, err
-        }
+	}
 
 	// decrypt and authenticate
-        rng := rand.Reader
+	rng := rand.Reader
 	plaintext, err := rsa.DecryptOAEP(sha256.New(), rng, &privateKey, ciphertext, nil)
 
 	if err == nil {

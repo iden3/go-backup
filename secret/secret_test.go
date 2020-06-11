@@ -2,8 +2,8 @@ package secret
 
 import (
 	"math/rand"
-	"testing" 
-        "reflect"
+	"reflect"
+	"testing"
 
 	"github.com/iden3/go-backup/ff"
 )
@@ -29,15 +29,15 @@ func TestShamirOK(t *testing.T) {
 	if err2 != nil {
 		t.Error(err2)
 	}
-        // Marshal/Unmarshal shares
-        for _, share := range(shares) {
-           share_byte := share.Marshal(ff.FF_BN256_FP)
-           share_rec := &Share{}
-           share_rec, err = share_rec.Unmarshal(share_byte)
-           if err != nil || !reflect.DeepEqual(*share_rec, share) {
-		t.Error("Error in Marshall/Unmarshal")
-          }
-        }
+	// Marshal/Unmarshal shares
+	for _, share := range shares {
+		share_byte := share.Marshal(ff.FF_BN256_FP)
+		share_rec := &Share{}
+		share_rec, err = share_rec.Unmarshal(share_byte)
+		if err != nil || !reflect.DeepEqual(*share_rec, share) {
+			t.Error("Error in Marshall/Unmarshal")
+		}
+	}
 
 	// select shares to regenerate secret
 	for iter := 0; iter < 10; iter++ {
@@ -50,7 +50,7 @@ func TestShamirOK(t *testing.T) {
 		}
 		if !secret.Equal(new_secret) {
 			t.Error("Secrets not equal")
-		} 
+		}
 	}
 }
 

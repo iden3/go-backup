@@ -67,7 +67,7 @@ const (
 )
 
 const (
-       DEFAULT_PRIME = FF_BN256_FP
+	DEFAULT_PRIME = FF_BN256_FP
 )
 
 // Create new  Finite Field Element depending on type
@@ -130,21 +130,21 @@ func IsValid(element_type int) bool {
 
 // Returns number of bits in element
 func Msb(el Element) int {
-   n := el.ToRegular().GetUint64()
-   for idx:=len(n)*64 - 1; idx >= 0; idx -= 1 {
-      word := int(idx/64)
-      bit := idx % 64
-      if (n[word] >> bit) & 0x1 == 1{
-        return idx
-      }
-   }
-   return 0
+	n := el.ToRegular().GetUint64()
+	for idx := len(n)*64 - 1; idx >= 0; idx -= 1 {
+		word := int(idx / 64)
+		bit := idx % 64
+		if (n[word]>>bit)&0x1 == 1 {
+			return idx
+		}
+	}
+	return 0
 }
 
 // Retrieves bit b from Element
 func Bit(el Element, b int) int {
-   n := el.ToRegular().GetUint64()
-   word := int(b/64)
-   bit := b % 64
-   return int((n[word] >> bit) & 0x1)
+	n := el.ToRegular().GetUint64()
+	word := int(b / 64)
+	bit := b % 64
+	return int((n[word] >> bit) & 0x1)
 }

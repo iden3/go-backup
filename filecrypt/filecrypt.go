@@ -73,7 +73,7 @@ const (
 const (
 	FC_CLEAR = iota // No encryption
 	FC_GCM          // GCM
-        FC_RSA
+	FC_RSA
 	FC_NTYPE
 )
 
@@ -87,15 +87,15 @@ const (
 
 // Supported encryption block sizes in bytes
 const (
-	FC_BSIZE_BYTES_128 = 16
-	FC_BSIZE_BYTES_256 = 32
-	FC_BSIZE_BYTES_2048=  256
-	FC_BSIZE_BYTES_4096= 512
+	FC_BSIZE_BYTES_128  = 16
+	FC_BSIZE_BYTES_256  = 32
+	FC_BSIZE_BYTES_2048 = 256
+	FC_BSIZE_BYTES_4096 = 512
 )
 
 var fc_bsize map[int]int = map[int]int{
-	FC_HDR_BSIZE_128: FC_BSIZE_BYTES_128,
-	FC_HDR_BSIZE_256: FC_BSIZE_BYTES_256,
+	FC_HDR_BSIZE_128:  FC_BSIZE_BYTES_128,
+	FC_HDR_BSIZE_256:  FC_BSIZE_BYTES_256,
 	FC_HDR_BSIZE_2048: FC_BSIZE_BYTES_2048,
 	FC_HDR_BSIZE_4096: FC_BSIZE_BYTES_4096,
 }
