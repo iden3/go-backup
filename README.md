@@ -14,6 +14,13 @@ This first version includes the basic functionality to:
 * Generate an Encryption key using some Key Derivation Scheme. For now, only PBKDF2 or direct Key methods are implemented, but they can be easily expanded
 * Encrypt and decrypt data structures adding enough information in a header so that they can be later decrypted. Also, we allow to include information with no  encrpytion that can be recovered without a Key.
 
+## Packages
+go-backup includes 4 packages:
+- ff : Finite Field Arithmetic Library based on goff (https://github.com/ConsenSys/goff). It defines an interface whose methods are implemented by  different elements created with goff.
+- secret : Secret Sharing Library
+- filecrypt : Encryption Library
+- backuplib : mobile friendly wrapper for ff, secret and filecrypt libraries
+
 
 
 

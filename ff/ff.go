@@ -60,20 +60,24 @@ type Element interface {
 // Type of FF defined
 const (
 	// 21888242871839275222246405745257275088696311157297823662689037894645226208583
-	FF_BN256_ORDER = iota
+	FF_BN256_FQ = iota
 	//21888242871839275222246405745257275088548364400416034343698204186575808495617
-	FF_BN256_PRIME
+	FF_BN256_FP
 	// Add more primes
+)
+
+const (
+       DEFAULT_PRIME = FF_BN256_FP
 )
 
 // Create new  Finite Field Element depending on type
 func NewElement(t int) (Element, error) {
 	switch t {
-	case FF_BN256_ORDER:
+	case FF_BN256_FQ:
 		var el element_bn256q
 		return &el, nil
 
-	case FF_BN256_PRIME:
+	case FF_BN256_FP:
 		var el element_bn256p
 		return &el, nil
 
@@ -112,14 +116,35 @@ func FromInterface(i1 interface{}, t int) (Element, error) {
 // Check if Element belongs to a known type
 func IsValid(element_type int) bool {
 	switch element_type {
-	case FF_BN256_PRIME:
+	case FF_BN256_FP:
 		return true
 
-	case FF_BN256_ORDER:
+	case FF_BN256_FQ:
 		return true
 
 	default:
 		return false
 	}
 
+}
+
+// Returns number of bits in element
+func Msb(el Element) int {
+   n := el.ToRegular().GetUint64()
+   for idx:=len(n)*64 - 1; idx >= 0; idx -= 1 {
+      word := int(idx/64)
+      bit := idx % 64
+      if (n[word] >> bit) & 0x1 == 1{
+        return idx
+      }
+   }
+   return 0
+}
+
+// Retrieves bit b from Element
+func Bit(el Element, b int) int {
+   n := el.ToRegular().GetUint64()
+   word := int(b/64)
+   bit := b % 64
+   return int((n[word] >> bit) & 0x1)
 }

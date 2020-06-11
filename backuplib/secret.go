@@ -110,3 +110,5 @@ func initSecretShares() {
 	shares.Data = share_data
 	SetShares(&shares)
 }
+
+

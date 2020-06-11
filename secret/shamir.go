@@ -113,6 +113,13 @@ func (cfg *Shamir) NewConfig(min_shares, max_shares, element_type int) error {
 	return nil
 }
 
+// Generate new secret
+func (s Shamir) NewSecret() ff.Element {
+	secret, _ := ff.NewElement(s.Element_type)
+	secret.SetRandom().ToMont()
+        return secret
+}
+
 // Generate random coefficients a[1]...a[Min_shares-1] in Montgomery belonging to Finite Field
 // f(x) = secret + a[1] * x + a[2] * x^2 + ... + a[Min_shares-1] * x^(Min_shares-1)
 // secret not included in poly

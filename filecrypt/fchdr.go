@@ -37,6 +37,8 @@ const (
 const (
 	FC_HDR_BSIZE_128 = iota
 	FC_HDR_BSIZE_256
+        FC_HDR_BSIZE_2048
+        FC_HDR_BSIZE_4096
 	FC_HDR_NBSIZE
 )
 

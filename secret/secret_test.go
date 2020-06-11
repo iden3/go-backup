@@ -1,21 +1,21 @@
 package secret
 
 import (
-	"fmt"
-	"github.com/iden3/go-backup/ff"
 	"math/rand"
-	"testing"
+	"testing" 
+        "reflect"
+
+	"github.com/iden3/go-backup/ff"
 )
 
 func TestShamirOK(t *testing.T) {
 	// Generate Shamir config
-	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_PRIME
+	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_FP
 	var cfg Shamir
-	err := cfg.NewConfig(min_shares, max_shares, ff.FF_BN256_PRIME)
+	err := cfg.NewConfig(min_shares, max_shares, prime)
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Config : ", cfg)
 
 	// Secret
 	secret, err1 := ff.NewElement(prime)
@@ -23,19 +23,25 @@ func TestShamirOK(t *testing.T) {
 		t.Error(err1)
 	}
 	secret.SetRandom().ToMont()
-	fmt.Println("Secret : ", secret)
 
 	// Generate Shares
 	shares, err2 := cfg.GenerateShares(secret)
 	if err2 != nil {
 		t.Error(err2)
 	}
+        // Marshal/Unmarshal shares
+        for _, share := range(shares) {
+           share_byte := share.Marshal(ff.FF_BN256_FP)
+           share_rec := &Share{}
+           share_rec, err = share_rec.Unmarshal(share_byte)
+           if err != nil || !reflect.DeepEqual(*share_rec, share) {
+		t.Error("Error in Marshall/Unmarshal")
+          }
+        }
 
 	// select shares to regenerate secret
 	for iter := 0; iter < 10; iter++ {
 		selected_shares := shuffleShares(shares, min_shares)
-		fmt.Printf("\nIteration : %d\n", iter)
-		//fmt.Println("Selected Shares ", selected_shares)
 
 		// generate key
 		new_secret, err3 := cfg.GenerateSecret(selected_shares)
@@ -44,29 +50,21 @@ func TestShamirOK(t *testing.T) {
 		}
 		if !secret.Equal(new_secret) {
 			t.Error("Secrets not equal")
-		} else {
-			fmt.Println("Secrets are equal (OK)")
-		}
+		} 
 	}
 }
 
 func TestShamirKO(t *testing.T) {
 	// Generate Shamir config
-	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_PRIME
+	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_FQ
 	var cfg Shamir
-	err := cfg.NewConfig(min_shares, max_shares, ff.FF_BN256_PRIME)
+	err := cfg.NewConfig(min_shares, max_shares, prime)
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Config : ", cfg)
 
 	// Secret
-	secret, err1 := ff.NewElement(prime)
-	if err1 != nil {
-		t.Error(err1)
-	}
-	secret.SetRandom().ToMont()
-	fmt.Println("Secret : ", secret)
+	secret := cfg.NewSecret()
 
 	// Generate Shares
 	shares, err2 := cfg.GenerateShares(secret)
@@ -77,17 +75,13 @@ func TestShamirKO(t *testing.T) {
 	// select insufficient shares to regenerate secret
 	for iter := 0; iter < 10; iter++ {
 		selected_shares := shuffleShares(shares, min_shares-1)
-		fmt.Printf("\nIteration : %d\n", iter)
-		//fmt.Println("Selected Shares ", selected_shares)
 
 		// generate key
 		new_secret, err3 := cfg.GenerateSecret(selected_shares)
 		if err3 != nil {
 			t.Error(err3)
 		}
-		if !secret.Equal(new_secret) {
-			fmt.Println("Secrets are not equal (OK)")
-		} else {
+		if secret.Equal(new_secret) {
 			t.Error("Secrets are equal")
 		}
 	}

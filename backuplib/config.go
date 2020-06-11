@@ -14,7 +14,7 @@ const (
 	N_ELEMENTS            = 1000 // used by walletcfg currently
 	MIN_N_SHARES          = 4
 	MAX_N_SHARES          = 10
-	PRIME                 = ff.FF_BN256_PRIME
+	PRIME                 = ff.FF_BN256_FP
 	BACKUP_FILE           = "../testdata/backup.bk"
 	QR_DIR                = "../testdata/"
 	PBKDF2_NITER          = 60000

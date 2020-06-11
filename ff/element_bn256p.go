@@ -79,7 +79,7 @@ func (z *element_bn256p) SetFromArray(xar []uint64) Element {
 	z[1] = xar[1]
 	z[2] = xar[2]
 	z[3] = xar[3]
-	return z
+	return z.ToMont()
 }
 
 // SetZero z = 0

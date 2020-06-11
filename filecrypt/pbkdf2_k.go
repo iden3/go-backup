@@ -18,11 +18,11 @@ import (
    version                    [ 1 Byte ] :  Header version
    keytype                    [ 1 Byte ] :
    hdrlen                     [ 1 Byte ] :
-   hash                       [ 1 Byte ] :  Indicates type of block (first, middle, last, single)
-   iter                       [ 4 Byte ] :  Module implementing Filecrypt interface
-   outlen                     [ 1 Byte ] :  Encryption block size
-   saltlen                    [ 1 Byte ] :  Encryption block size
-   salt                       [ 1 Byte ] :  Nonce size in bytes
+   hash                       [ 1 Byte ] :  
+   iter                       [ 4 Byte ] :  
+   outlen                     [ 1 Byte ] :  
+   saltlen                    [ 1 Byte ] :  
+   salt                       [ 1 Byte ] :  
    key_in
    key_out
 */
