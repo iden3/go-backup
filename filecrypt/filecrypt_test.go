@@ -27,13 +27,13 @@ type FCTest2 struct {
 }
 
 func initFCTest1(s int) *FCTest1 {
-	var test_data FCTest1
+	var testData FCTest1
 	for i := 0; i < TEST_N_ELEMS; i++ {
-		test_data.X[i] = uint64(i + s)
+		testData.X[i] = uint64(i + s)
 	}
-	test_data.T = "test1"
+	testData.T = "test1"
 
-	return &test_data
+	return &testData
 }
 
 func initFCTest2(s int) *FCTest2 {
@@ -70,9 +70,9 @@ func init() {
 
 func TestFCDirectGCM(t *testing.T) {
 	// init tests data
-	test_data1 := initFCTest1(12)
-	test_data2 := initFCTest1(2335)
-	test_data3 := initFCTest2(4)
+	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(2335)
+	testData3 := initFCTest2(4)
 
 	// register struct
 	gob.Register(&FCTest1{})
@@ -82,39 +82,39 @@ func TestFCDirectGCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	// init key hdr
-	hdr_k := &DirectKeyFc{}
-	err = hdr_k.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, key)
+	hdrK := &DirectKeyFc{}
+	err = hdrK.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, key)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdr_e := &GcmFc{}
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE := &GcmFc{}
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data1)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data2)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data3)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -129,22 +129,22 @@ func TestFCDirectGCM(t *testing.T) {
 	r2 := *result[1].(*FCTest1)
 	r3 := *result[2].(*FCTest2)
 
-	if r1 != *test_data1 {
+	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if r2 != *test_data2 {
+	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
+	if !reflect.DeepEqual(r3.X, (*testData3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
 
 func TestFCDirectRSA(t *testing.T) {
 	// init tests data
-	test_data1 := initFCTest1(12)
-	test_data2 := initFCTest1(25)
-	test_data3 := initFCTest2(4)
+	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(25)
+	testData3 := initFCTest2(4)
 
 	// register struct
 	gob.Register(&FCTest1{})
@@ -156,39 +156,39 @@ func TestFCDirectRSA(t *testing.T) {
 	privateKeyB, _ := json.Marshal(privKey)
 
 	// init key hdr
-	hdr_k := &DirectKeyFc{}
-	err := hdr_k.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, publicKeyB)
+	hdrK := &DirectKeyFc{}
+	err := hdrK.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, publicKeyB)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdr_e := &RsaFc{}
-	err = hdr_e.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_FIRST)
+	hdrE := &RsaFc{}
+	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data1)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_MID)
+	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data2)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_LAST)
+	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data3)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,61 +203,61 @@ func TestFCDirectRSA(t *testing.T) {
 	r2 := *result[1].(*FCTest1)
 	r3 := *result[2].(*FCTest2)
 
-	if r1 != *test_data1 {
+	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if r2 != *test_data2 {
+	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
+	if !reflect.DeepEqual(r3.X, (*testData3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
 
 func TestFCNokeyClear(t *testing.T) {
 	// init tests data
-	test_data1 := initFCTest1(12)
-	test_data2 := initFCTest1(2335)
-	test_data3 := initFCTest2(4)
+	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(2335)
+	testData3 := initFCTest2(4)
 
 	// register struct
 	gob.Register(&FCTest1{})
 	gob.Register(&FCTest2{})
 
 	// init key hdr
-	hdr_k := &NoKeyFc{}
-	err := hdr_k.FillHdr(TEST_VERSION, FC_KEY_T_NOKEY)
+	hdrK := &NoKeyFc{}
+	err := hdrK.FillHdr(TEST_VERSION, FC_KEY_T_NOKEY)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdr_e := &ClearFc{}
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE := &ClearFc{}
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data1)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data2)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data3)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -272,22 +272,22 @@ func TestFCNokeyClear(t *testing.T) {
 	r2 := *result[1].(*FCTest1)
 	r3 := *result[2].(*FCTest2)
 
-	if r1 != *test_data1 {
+	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if r2 != *test_data2 {
+	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
+	if !reflect.DeepEqual(r3.X, (*testData3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
 
 func TestFCPbkdf2GCM(t *testing.T) {
 	// init tests data
-	test_data1 := initFCTest1(12)
-	test_data2 := initFCTest1(2335)
-	test_data3 := initFCTest2(4)
+	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(2335)
+	testData3 := initFCTest2(4)
 
 	// register struct
 	gob.Register(&FCTest1{})
@@ -297,8 +297,8 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
 
 	// init key hdr
-	hdr_k := &Pbkdf2Fc{}
-	err = hdr_k.FillHdr(
+	hdrK := &Pbkdf2Fc{}
+	err = hdrK.FillHdr(
 		TEST_VERSION,
 		FC_KEY_T_PBKDF2,
 		FC_HASH_SHA256,
@@ -311,32 +311,32 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	}
 
 	// encrypt first block
-	hdr_e := &GcmFc{}
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE := &GcmFc{}
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data1)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data2)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data3)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -351,22 +351,22 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	r2 := *result[1].(*FCTest1)
 	r3 := *result[2].(*FCTest2)
 
-	if r1 != *test_data1 {
+	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if r2 != *test_data2 {
+	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
+	if !reflect.DeepEqual(r3.X, (*testData3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
 
 func TestFCPbkdf2Clear(t *testing.T) {
 	// init tests data
-	test_data1 := initFCTest1(12)
-	test_data2 := initFCTest1(2335)
-	test_data3 := initFCTest2(4)
+	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(2335)
+	testData3 := initFCTest2(4)
 
 	// register struct
 	gob.Register(&FCTest1{})
@@ -376,8 +376,8 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
 
 	// init key hdr
-	hdr_k := &Pbkdf2Fc{}
-	err = hdr_k.FillHdr(
+	hdrK := &Pbkdf2Fc{}
+	err = hdrK.FillHdr(
 		TEST_VERSION,
 		FC_KEY_T_PBKDF2,
 		FC_HASH_SHA256,
@@ -390,32 +390,32 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	}
 
 	// encrypt first block
-	hdr_e := &ClearFc{}
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE := &ClearFc{}
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data1)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data2)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	err = hdr_e.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdr_k, hdr_e, "./testdata/sample1.dat", test_data3)
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -430,13 +430,13 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	r2 := *result[1].(*FCTest1)
 	r3 := *result[2].(*FCTest2)
 
-	if r1 != *test_data1 {
+	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if r2 != *test_data2 {
+	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*test_data3).X) {
+	if !reflect.DeepEqual(r3.X, (*testData3).X) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }

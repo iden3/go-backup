@@ -57,14 +57,14 @@ func TestFCryptClearHdr(t *testing.T) {
 	// add blocks
 	hdr.setNBlocks(TEST_LEN)
 	// write hdr to bytes
-	hdr_bytes, err := hdr.toBytes()
+	hdrBytes, err := hdr.toBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
 	// retrieve hdr from bytes
 	hdr2 := &ClearFc{}
-	hdr2.fromBytes(hdr_bytes)
+	hdr2.fromBytes(hdrBytes)
 
 	if *hdr != *hdr2 {
 		t.Error("FC handles not equal")
@@ -72,21 +72,21 @@ func TestFCryptClearHdr(t *testing.T) {
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
-	expected_hdr := ClearFc{
+	expectedHdr := ClearFc{
 		fchdr: fchdr{
-			version:        TEST_VERSION,
-			block_idx:      TEST0_BIDX,
-			fctype:         TEST0_TYPE,
-			blocksize:      TEST0_BLOCK_SIZE,
-			noncesize:      0,
-			last_blocksize: TEST0_LAST_BSIZE,
-			nblocks:        TEST0_NBLOCKS,
+			version:       TEST_VERSION,
+			blockIdx:      TEST0_BIDX,
+			fctype:        TEST0_TYPE,
+			blocksize:     TEST0_BLOCK_SIZE,
+			noncesize:     0,
+			lastBlocksize: TEST0_LAST_BSIZE,
+			nblocks:       TEST0_NBLOCKS,
 		},
 	}
 
-	if *hdr != expected_hdr {
+	if *hdr != expectedHdr {
 		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expected_hdr)
+		fmt.Println("Expected HDR  : ", expectedHdr)
 		fmt.Println("Obtainted HDR : ", *hdr)
 	}
 }
@@ -100,14 +100,14 @@ func TestFCryptNoKeyHdr(t *testing.T) {
 	}
 
 	// write hdr to bytes
-	hdr_bytes, err := hdr.toBytes()
+	hdrBytes, err := hdr.toBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
 	// retrieve hdr from bytes
 	hdr2 := &NoKeyFc{}
-	hdr2.fromBytes(hdr_bytes)
+	hdr2.fromBytes(hdrBytes)
 
 	if !isNoKeyHdrEqual(hdr, hdr2) {
 		t.Error("FC handles not equal")
@@ -115,14 +115,14 @@ func TestFCryptNoKeyHdr(t *testing.T) {
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
-	expected_hdr := &NoKeyFc{
+	expectedHdr := &NoKeyFc{
 		version: TEST_VERSION,
 		keytype: TEST1_TYPE,
 	}
 
-	if !isNoKeyHdrEqual(hdr, expected_hdr) {
+	if !isNoKeyHdrEqual(hdr, expectedHdr) {
 		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expected_hdr)
+		fmt.Println("Expected HDR  : ", expectedHdr)
 		fmt.Println("Obtainted HDR : ", *hdr)
 	}
 }
@@ -143,14 +143,14 @@ func TestFCryptGCMHdr(t *testing.T) {
 	hdr.setNBlocks(TEST_LEN)
 
 	// write hdr to bytes
-	hdr_bytes, err := hdr.toBytes()
+	hdrBytes, err := hdr.toBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
 	// retrieve hdr from bytes
 	hdr2 := &GcmFc{}
-	hdr2.fromBytes(hdr_bytes)
+	hdr2.fromBytes(hdrBytes)
 
 	if *hdr != *hdr2 {
 		t.Error("FC handles not equal")
@@ -158,52 +158,52 @@ func TestFCryptGCMHdr(t *testing.T) {
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
-	expected_hdr := GcmFc{
+	expectedHdr := GcmFc{
 		fchdr{
-			version:        TEST_VERSION,
-			block_idx:      TEST2_BIDX,
-			fctype:         TEST2_TYPE,
-			blocksize:      TEST2_BLOCK_SIZE,
-			noncesize:      TEST2_NONCE_SIZE,
-			last_blocksize: TEST2_LAST_BSIZE,
-			nblocks:        TEST2_NBLOCKS,
+			version:       TEST_VERSION,
+			blockIdx:      TEST2_BIDX,
+			fctype:        TEST2_TYPE,
+			blocksize:     TEST2_BLOCK_SIZE,
+			noncesize:     TEST2_NONCE_SIZE,
+			lastBlocksize: TEST2_LAST_BSIZE,
+			nblocks:       TEST2_NBLOCKS,
 		},
 	}
 
-	if *hdr != expected_hdr {
+	if *hdr != expectedHdr {
 		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expected_hdr)
+		fmt.Println("Expected HDR  : ", expectedHdr)
 		fmt.Println("Obtainted HDR : ", *hdr)
 	}
 
 	//check padding was correctly computed
-	nonce_padding_len := hdr.getNoncePaddingLen()
-	if nonce_padding_len != TEST2_NONCE_PADDING {
+	noncePaddingLen := hdr.getNoncePaddingLen()
+	if noncePaddingLen != TEST2_NONCE_PADDING {
 		t.Error("Unexpected Nonce Padding Length")
 		fmt.Println("Expected Nonce Len : ", TEST2_NONCE_PADDING)
-		fmt.Println("Obtained Nonce Len : ", nonce_padding_len)
+		fmt.Println("Obtained Nonce Len : ", noncePaddingLen)
 	}
 }
 
 func TestFCryptPNoKeyHdr(t *testing.T) {
 	// Generate PBKDF2 Key Header
-	key_in, err := genRandomBytes(TEST_KEYIN_LEN)
+	keyIn, err := genRandomBytes(TEST_KEYIN_LEN)
 	hdr := &Pbkdf2Fc{}
 	err = hdr.FillHdr(TEST_VERSION, TEST3_TYPE, TEST_HASH_TYPE,
-		TEST_ITER, TEST_OUTLEN, TEST_SALTLEN, key_in)
+		TEST_ITER, TEST_OUTLEN, TEST_SALTLEN, keyIn)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// write hdr to bytes
-	hdr_bytes, err := hdr.toBytes()
+	hdrBytes, err := hdr.toBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
 	// retrieve hdr from bytes
 	hdr2 := &Pbkdf2Fc{}
-	hdr2.fromBytes(hdr_bytes)
+	hdr2.fromBytes(hdrBytes)
 
 	if !isPbkdf2HdrEqual(hdr, hdr2) {
 		t.Error("FC handles not equal")
@@ -211,7 +211,7 @@ func TestFCryptPNoKeyHdr(t *testing.T) {
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
-	expected_hdr := &Pbkdf2Fc{
+	expectedHdr := &Pbkdf2Fc{
 		version:  TEST_VERSION,
 		keytype:  TEST3_TYPE,
 		hdrlen:   FC_PBKDF2HDR_SALT_OFFSET + TEST_SALTLEN,
@@ -221,31 +221,31 @@ func TestFCryptPNoKeyHdr(t *testing.T) {
 		saltlen:  TEST_SALTLEN,
 	}
 
-	if !isPbkdf2HdrEqual(hdr, expected_hdr) {
+	if !isPbkdf2HdrEqual(hdr, expectedHdr) {
 		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expected_hdr)
+		fmt.Println("Expected HDR  : ", expectedHdr)
 		fmt.Println("Obtainted HDR : ", *hdr)
 	}
 }
 
 func TestFCryptDirectKeyHdr(t *testing.T) {
 	// Generate Direct Key Header
-	key_in, err := genRandomBytes(TEST_KEYIN_LEN)
+	keyIn, err := genRandomBytes(TEST_KEYIN_LEN)
 	hdr := &DirectKeyFc{}
-	err = hdr.FillHdr(TEST_VERSION, TEST4_TYPE, key_in)
+	err = hdr.FillHdr(TEST_VERSION, TEST4_TYPE, keyIn)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// write hdr to bytes
-	hdr_bytes, err := hdr.toBytes()
+	hdrBytes, err := hdr.toBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
 	// retrieve hdr from bytes
 	hdr2 := &DirectKeyFc{}
-	hdr2.fromBytes(hdr_bytes)
+	hdr2.fromBytes(hdrBytes)
 
 	if !isDirectKeyHdrEqual(hdr, hdr2) {
 		t.Error("FC handles not equal")
@@ -253,14 +253,14 @@ func TestFCryptDirectKeyHdr(t *testing.T) {
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
-	expected_hdr := &DirectKeyFc{
+	expectedHdr := &DirectKeyFc{
 		version: TEST_VERSION,
 		keytype: TEST4_TYPE,
 	}
 
-	if !isDirectKeyHdrEqual(hdr, expected_hdr) {
+	if !isDirectKeyHdrEqual(hdr, expectedHdr) {
 		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expected_hdr)
+		fmt.Println("Expected HDR  : ", expectedHdr)
 		fmt.Println("Obtainted HDR : ", *hdr)
 	}
 }

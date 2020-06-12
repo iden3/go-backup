@@ -9,22 +9,22 @@ import (
 	"testing"
 )
 
-var old_kOp []byte
-var old_Wallet WalletConfig
-var old_Shares Shares
-var old_SecretCfg Secret
-var old_Custodians Custodians
-var old_PK PrivateKeys
-var old_Storage []db.KV
+var oldKOp []byte
+var oldWallet WalletConfig
+var oldShares Shares
+var oldSecretCfg Secret
+var oldCustodians Custodians
+var oldPK PrivateKeys
+var oldStorage []db.KV
 
 func copyBackupData() {
-	old_kOp = GetkOp()
-	old_Wallet = *GetWallet()
-	old_Shares = *GetShares()
-	old_SecretCfg = *GetSecretCfg()
-	old_Custodians = *GetCustodians()
-	old_PK = *GetPrivateKeys()
-	old_Storage = GetStorage()
+	oldKOp = GetkOp()
+	oldWallet = *GetWallet()
+	oldShares = *GetShares()
+	oldSecretCfg = *GetSecretCfg()
+	oldCustodians = *GetCustodians()
+	oldPK = *GetPrivateKeys()
+	oldStorage = GetStorage()
 }
 
 func deleteBackupData() {
@@ -111,7 +111,7 @@ func TestRestore(t *testing.T) {
 		t.Error(err)
 	}
 
-	res := checkEqual(old_Custodians, *GetCustodians())
+	res := checkEqual(oldCustodians, *GetCustodians())
 	if res {
 		fmt.Println("Retrieved Custodians .... OK")
 	} else {
@@ -120,11 +120,11 @@ func TestRestore(t *testing.T) {
 
 	// Retreive sharing info -> Finite Field information and protocol (Shamir's secret sharing) required to
 	//    regenerate the KEY. It is unencrypted
-	res = checkEqual(old_SecretCfg, *GetSecretCfg())
+	res = checkEqual(oldSecretCfg, *GetSecretCfg())
 	if res {
 		fmt.Println("Retrieved Sharing Conf .... OK")
 	} else {
-		fmt.Println(old_SecretCfg, *GetSecretCfg())
+		fmt.Println(oldSecretCfg, *GetSecretCfg())
 		t.Error("Retrieved Sharing Conf .... KO")
 	}
 
@@ -142,7 +142,7 @@ func TestRestore(t *testing.T) {
 	//   Using the collected shares, regenerate Key
 	kOp := GenerateKey()
 	SetkOp(kOp)
-	res = checkEqual(old_kOp, GetkOp())
+	res = checkEqual(oldKOp, GetkOp())
 	if res {
 		fmt.Println("Retrieved kOp .... OK")
 	} else {
@@ -156,28 +156,28 @@ func TestRestore(t *testing.T) {
 
 	// With the decrpyted and decoded information, retrieve all information we stored and check
 	// if it is equal than the original
-	res = checkEqual(old_Wallet, *GetWallet())
+	res = checkEqual(oldWallet, *GetWallet())
 	if res {
 		fmt.Println("Retrieved Wallet .... OK")
 	} else {
 		t.Error("Retrieved Wallet .... KO")
 	}
 
-	res = checkEqual(old_Shares, *GetShares())
+	res = checkEqual(oldShares, *GetShares())
 	if res {
 		fmt.Println("Retrieved Shares .... OK")
 	} else {
 		t.Error("Retrieved Shares .... KO")
 	}
 
-	res = checkEqual(old_PK, *GetPrivateKeys())
+	res = checkEqual(oldPK, *GetPrivateKeys())
 	if res {
 		fmt.Println("Retrieved Private Keys .... OK")
 	} else {
 		t.Error("Retrieved Private Keys .... KO")
 	}
 
-	res = checkEqual(old_Storage, GetStorage())
+	res = checkEqual(oldStorage, GetStorage())
 	if res {
 		fmt.Println("Retrieved Storage .... OK")
 	} else {

@@ -10,11 +10,11 @@ import (
   Header size : 16 bytes
   Header Format :
    version                    [ 1 Byte ] :  Header version
-   block_idx                  [ 1 Byte ] :  Indicates type of block (first, middle, last, single)
+   blockIdx                  [ 1 Byte ] :  Indicates type of block (first, middle, last, single)
    fctype                     [ 1 Byte ] :  Module implementing Filecrypt interface
    blocksize                  [ 1 Byte ] :  Encryption block size
    noncesize                  [ 1 Byte ] :  Nonce size in bytes
-   last_blocksize             [ 1 Byte ] :  Size of last block cleartext in bytes
+   lastBlocksize             [ 1 Byte ] :  Size of last block cleartext in bytes
    nblocks                    [ 8 Bytes] :  Number of blocks
 */
 
@@ -56,57 +56,57 @@ const (
 
 // Filecrypt Header added to every FC block
 type fchdr struct {
-	version        int
-	block_idx      int
-	fctype         int
-	blocksize      int
-	noncesize      int
-	last_blocksize int
-	nblocks        int
+	version       int
+	blockIdx      int
+	fctype        int
+	blocksize     int
+	noncesize     int
+	lastBlocksize int
+	nblocks       int
 }
 
 // Init Hdr Struct
-func (hdr *fchdr) FillHdr(Version, Fctype, Blocksize, Block_idx int) error {
+func (hdr *fchdr) FillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Fctype >= FC_NTYPE ||
-		Block_idx >= FC_HDR_NBIDX {
+		BlockIdx >= FC_HDR_NBIDX {
 		return errors.New("Invalid arguments")
 	}
-	sel_key := FC_HDR_NBSIZE
-	for key, val := range fc_bsize {
+	selKey := FC_HDR_NBSIZE
+	for key, val := range fcBsize {
 		if val == Blocksize {
-			sel_key = key
+			selKey = key
 			break
 		}
 	}
-	if sel_key == FC_HDR_NBSIZE {
+	if selKey == FC_HDR_NBSIZE {
 		return errors.New("Invalid arguments")
 	}
 
 	hdr.version = Version
-	hdr.block_idx = Block_idx
+	hdr.blockIdx = BlockIdx
 	hdr.fctype = Fctype
-	hdr.blocksize = sel_key
+	hdr.blocksize = selKey
 
 	return nil
 }
 
 // Add n blocks and padding last block to header
 func (hdr *fchdr) setNBlocks(nbytes int) {
-	hdr.nblocks = int((nbytes + fc_bsize[hdr.blocksize] - 1) / fc_bsize[hdr.blocksize])
-	hdr.last_blocksize = nbytes % fc_bsize[hdr.blocksize]
+	hdr.nblocks = int((nbytes + fcBsize[hdr.blocksize] - 1) / fcBsize[hdr.blocksize])
+	hdr.lastBlocksize = nbytes % fcBsize[hdr.blocksize]
 }
 
 // from bytes to Hdr struct
-func (hdr *fchdr) fromBytes(hdr_bytes []byte) {
-	hdr.version = int(hdr_bytes[FC_HDR_VERSION_OFFSET])
-	hdr.block_idx = int(hdr_bytes[FC_HDR_BLOCK_IDX_OFFSET])
-	hdr.fctype = int(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-	hdr.blocksize = int(hdr_bytes[FC_HDR_BSIZE_OFFSET])
-	hdr.noncesize = int(hdr_bytes[FC_HDR_NONCESIZE_OFFSET])
-	hdr.last_blocksize = int(hdr_bytes[FC_HDR_LAST_BLOCKSIZE_OFFSET])
-	hdr.nblocks = int(binary.LittleEndian.Uint64(hdr_bytes[FC_HDR_NBLOCKS_OFFSET:FC_HDR_END_OFFSET]))
+func (hdr *fchdr) fromBytes(hdrBytes []byte) {
+	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
+	hdr.blockIdx = int(hdrBytes[FC_HDR_BLOCK_IDX_OFFSET])
+	hdr.fctype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	hdr.blocksize = int(hdrBytes[FC_HDR_BSIZE_OFFSET])
+	hdr.noncesize = int(hdrBytes[FC_HDR_NONCESIZE_OFFSET])
+	hdr.lastBlocksize = int(hdrBytes[FC_HDR_LAST_BLOCKSIZE_OFFSET])
+	hdr.nblocks = int(binary.LittleEndian.Uint64(hdrBytes[FC_HDR_NBLOCKS_OFFSET:FC_HDR_END_OFFSET]))
 
 }
 
@@ -114,11 +114,11 @@ func (hdr *fchdr) fromBytes(hdr_bytes []byte) {
 func (hdr fchdr) toBytes() ([]byte, error) {
 	header := make([]byte, FC_BSIZE_BYTES_128)
 	header[FC_HDR_VERSION_OFFSET] = byte(hdr.version)
-	header[FC_HDR_BLOCK_IDX_OFFSET] = byte(hdr.block_idx)
+	header[FC_HDR_BLOCK_IDX_OFFSET] = byte(hdr.blockIdx)
 	header[FC_HDR_FCTYPE_OFFSET] = byte(hdr.fctype)
 	header[FC_HDR_BSIZE_OFFSET] = byte(hdr.blocksize)
 	header[FC_HDR_NONCESIZE_OFFSET] = byte(hdr.noncesize)
-	header[FC_HDR_LAST_BLOCKSIZE_OFFSET] = byte(hdr.last_blocksize)
+	header[FC_HDR_LAST_BLOCKSIZE_OFFSET] = byte(hdr.lastBlocksize)
 	binary.LittleEndian.PutUint64(header[FC_HDR_NBLOCKS_OFFSET:FC_HDR_END_OFFSET], uint64(hdr.nblocks))
 
 	return header, nil
@@ -126,9 +126,9 @@ func (hdr fchdr) toBytes() ([]byte, error) {
 
 // returns length of padding added to nonce to fill an integer number of blocks
 func (hdr fchdr) getNoncePaddingLen() int {
-	nonce_padding := int((hdr.noncesize + fc_bsize[hdr.blocksize] - 1) / fc_bsize[hdr.blocksize] * fc_bsize[hdr.blocksize])
-	nonce_padding -= hdr.noncesize
-	return nonce_padding
+	noncePadding := int((hdr.noncesize + fcBsize[hdr.blocksize] - 1) / fcBsize[hdr.blocksize] * fcBsize[hdr.blocksize])
+	noncePadding -= hdr.noncesize
+	return noncePadding
 }
 
 func (hdr *fchdr) setNonceSize(s int) {
@@ -136,24 +136,24 @@ func (hdr *fchdr) setNonceSize(s int) {
 }
 
 func (hdr fchdr) getNBlockBytes() int {
-	block_bytes := fc_bsize[hdr.blocksize] * hdr.nblocks
-	if hdr.last_blocksize > 0 {
-		block_bytes -= (fc_bsize[hdr.blocksize] - hdr.last_blocksize)
+	blockBytes := fcBsize[hdr.blocksize] * hdr.nblocks
+	if hdr.lastBlocksize > 0 {
+		blockBytes -= (fcBsize[hdr.blocksize] - hdr.lastBlocksize)
 	}
-	return block_bytes
+	return blockBytes
 }
 
 func (hdr fchdr) isFirstBlock() bool {
-	if hdr.block_idx == FC_HDR_BIDX_FIRST ||
-		hdr.block_idx == FC_HDR_BIDX_SINGLE {
+	if hdr.blockIdx == FC_HDR_BIDX_FIRST ||
+		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
 		return true
 	}
 	return false
 }
 
 func (hdr fchdr) isLasttBlock() bool {
-	if hdr.block_idx == FC_HDR_BIDX_LAST ||
-		hdr.block_idx == FC_HDR_BIDX_SINGLE {
+	if hdr.blockIdx == FC_HDR_BIDX_LAST ||
+		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
 		return true
 	}
 	return false

@@ -14,7 +14,7 @@ type BackupData struct {
 	kOp              []byte         // Key. Assumed it is derived from a password
 	wallet           *WalletConfig  // Simulated wallet configuration parameters
 	secretShares     *Shares        // Shares. Needed in case we want to continue distributing them
-	secret_cfg       *secret.Shamir // Configuration osf secret sharing
+	secretCfg        *secret.Shamir // Configuration osf secret sharing
 	secretCustodians *Custodians    // Info on custodians so that we can retrieve it later
 	pK               *PrivateKeys   // Identity private keys
 	storage          []db.KV        // Identity storage
@@ -49,30 +49,30 @@ func SetShares(data *Shares) {
 }
 
 func GetSecretCfg() *Secret {
-	secret_cfg := Secret{
+	secretCfg := Secret{
 		secret.Shamir{
-			Max_shares:   dataBackup.secret_cfg.GetMaxShares(),
-			Min_shares:   dataBackup.secret_cfg.GetMinShares(),
-			Element_type: dataBackup.secret_cfg.GetElType(),
+			MaxShares:   dataBackup.secretCfg.GetMaxShares(),
+			MinShares:   dataBackup.secretCfg.GetMinShares(),
+			ElementType: dataBackup.secretCfg.GetElType(),
 		},
 	}
-	return &secret_cfg
+	return &secretCfg
 }
 
 func GetSecretCfgOriginal() *secret.Shamir {
-	return dataBackup.secret_cfg
+	return dataBackup.secretCfg
 }
 
 func SetSecretCfg(data *Secret) {
 	if data != nil {
-		secret_cfg := secret.Shamir{
-			Max_shares:   data.GetMaxShares(),
-			Min_shares:   data.GetMinShares(),
-			Element_type: data.GetElType(),
+		secretCfg := secret.Shamir{
+			MaxShares:   data.GetMaxShares(),
+			MinShares:   data.GetMinShares(),
+			ElementType: data.GetElType(),
 		}
-		dataBackup.secret_cfg = &secret_cfg
+		dataBackup.secretCfg = &secretCfg
 	} else {
-		dataBackup.secret_cfg = nil
+		dataBackup.secretCfg = nil
 	}
 }
 
@@ -96,8 +96,8 @@ func SetPrivateKeys(data *PrivateKeys) {
 		for idx, pk := range data.PK {
 			PK[idx] = pk
 		}
-		private_key := PrivateKeys{PK: PK}
-		dataBackup.pK = &private_key
+		privateKey := PrivateKeys{PK: PK}
+		dataBackup.pK = &privateKey
 	}
 }
 

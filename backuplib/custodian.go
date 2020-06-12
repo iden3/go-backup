@@ -31,7 +31,7 @@ const (
 
 type Custodian struct {
 	Nickname string
-	N_shares int // number of shares provided
+	NShares  int // number of shares provided
 	Fname    string
 }
 
@@ -56,40 +56,40 @@ func GetCustodian(n int) *Custodian {
 }
 
 // Add new Custodian and simulate the distribution of N shares
-func addCustodian(nickname, folder string, method int, shares []secret.Share, start_idx, nshares int) error {
+func addCustodian(nickname, folder string, method int, shares []secret.Share, startIdx, nshares int) error {
 	// add info to custodian
-	new_custodian := Custodian{
+	newCustodian := Custodian{
 		Nickname: nickname,
-		N_shares: nshares,
+		NShares:  nshares,
 	}
 
 	// encode share information to stream of bytes.
-	shares_array := make([]secret.Share, 0)
-	shares_array = append(shares_array, shares[start_idx:start_idx+nshares]...)
+	sharesArray := make([]secret.Share, 0)
+	sharesArray = append(sharesArray, shares[startIdx:startIdx+nshares]...)
 
 	// generate QR
 	if method == QR {
-		share_string := encodeShareToString(shares_array, folder)
+		shareString := encodeShareToString(sharesArray, folder)
 		qrfile := folder + "qr-" + nickname + ".png"
-		new_custodian.Fname = qrfile
-		err := qrgen.WriteFile(share_string, qrgen.High, 256, qrfile)
+		newCustodian.Fname = qrfile
+		err := qrgen.WriteFile(shareString, qrgen.High, 256, qrfile)
 		if err == nil {
 			custodians := GetCustodians()
-			custodians.Data = append(custodians.Data, new_custodian)
+			custodians.Data = append(custodians.Data, newCustodian)
 			SetCustodians(custodians)
 		}
 		return err
 
 		// generate Raw data
 	} else if method == NONE {
-		share_bytes := encodeShareToByte(shares_array, folder)
+		shareBytes := encodeShareToByte(sharesArray, folder)
 		fname := folder + "byte-" + nickname + ".dat"
-		new_custodian.Fname = fname
+		newCustodian.Fname = fname
 		file, _ := os.Create(fname)
-		file.Write(share_bytes)
+		file.Write(shareBytes)
 		file.Close()
 		custodians := GetCustodians()
-		custodians.Data = append(SecretCustodians.Data, new_custodian)
+		custodians.Data = append(SecretCustodians.Data, newCustodian)
 		SetCustodians(custodians)
 		return nil
 
@@ -100,33 +100,33 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 
 func initCustodians() {
 	var custodians Custodians
-	custodians_data := make([]Custodian, 0)
-	custodians.Data = custodians_data
+	custodiansData := make([]Custodian, 0)
+	custodians.Data = custodiansData
 	SetCustodians(&custodians)
 }
 
-func AddCustodian(nickname, folder string, method int, start_idx, nshares int) error {
-	shares_go := toShares(GetShares())
+func AddCustodian(nickname, folder string, method int, startIdx, nshares int) error {
+	sharesGo := toShares(GetShares())
 
-	err := addCustodian(nickname, folder, method, shares_go, start_idx, nshares)
+	err := addCustodian(nickname, folder, method, sharesGo, startIdx, nshares)
 	return err
 }
 
 func ScanQRShare(fname string) {
-	rx_shares_go := scanQRShare(fname)
-	rx_share_mobile := Shares{Data: fromShares(rx_shares_go)}
+	rxSharesGo := scanQRShare(fname)
+	rxShareMobile := Shares{Data: fromShares(rxSharesGo)}
 
 	shares := GetShares()
-	shares.Data = append(shares.Data, rx_share_mobile.Data...)
+	shares.Data = append(shares.Data, rxShareMobile.Data...)
 	SetShares(shares)
 }
 
 // Decode QR that includes a share, and return it a slice of maps with the index and the share
 func scanQRShare(fname string) []secret.Share {
-	var tmp_fname string
+	var tmpFname string
 	if filepath.Ext(fname) == ".png" {
-		dir_name := filepath.Dir(fname)
-		tmp_fname = dir_name + "/tmp_f"
+		dirName := filepath.Dir(fname)
+		tmpFname = dirName + "/tmp_f"
 		imgdata, err := ioutil.ReadFile(fname)
 		if err != nil {
 			panic(err)
@@ -140,8 +140,8 @@ func scanQRShare(fname string) []secret.Share {
 		if err != nil {
 			panic(err)
 		}
-		file, err := os.Create(tmp_fname)
-		defer os.Remove(tmp_fname)
+		file, err := os.Create(tmpFname)
+		defer os.Remove(tmpFname)
 		if err != nil {
 			panic(err)
 		}
@@ -149,11 +149,11 @@ func scanQRShare(fname string) []secret.Share {
 		file.Close()
 
 	} else {
-		tmp_fname = fname
+		tmpFname = fname
 	}
 
-	// tmp_fname is a file including the encoded share.
-	qrinfo := decode(tmp_fname, nil)
+	// tmpFname is a file including the encoded share.
+	qrinfo := decode(tmpFname, nil)
 	share := retrieveShares(qrinfo)
 
 	return share

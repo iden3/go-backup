@@ -3,6 +3,7 @@ package filecrypt
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"fmt"
 )
 
 type GcmFc struct {
@@ -13,18 +14,26 @@ type GcmFc struct {
 //   bits depending on key length
 func (hdr *GcmFc) encrypt(fname string, key []byte, cleartext interface{}) error {
 	cphr, err := aes.NewCipher(key)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("NewCipher : %w", err)
+	}
 
 	gcm, err := cipher.NewGCM(cphr)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("NewGCM : %w", err)
+	}
 
 	// Encode cleartext to byte stream
 	bytestream, err := interfaceEncode(cleartext)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("interfaceEncode : %w", err)
+	}
 
 	// nonce computation
 	nonce, err := genRandomBytes(gcm.NonceSize())
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("genRandomBytes : %w", err)
+	}
 
 	// Encrypt and seal
 	ciphertext := gcm.Seal(bytestream[:0], nonce, bytestream, nil)
@@ -36,28 +45,40 @@ func (hdr *GcmFc) encrypt(fname string, key []byte, cleartext interface{}) error
 	hdr.setNBlocks(len(ciphertext) + len(nonce) + hdr.getNoncePaddingLen())
 
 	fhdr, err := hdr.toBytes()
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("hdr.toBytes : %w", err)
+	}
 
 	// Append to file
 	file, err := openFileA(fname)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Open file : %w", err)
+	}
 	defer file.Close()
 
 	// write header to file
 	_, err = file.Write(fhdr)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Write file : %w", err)
+	}
 	// write nonce
 	_, err = file.Write(nonce)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Write file : %w", err)
+	}
 
 	// write nonce padding
-	nonce_padding := make([]byte, hdr.getNoncePaddingLen())
-	_, err = file.Write(nonce_padding)
-	checkError(err)
+	noncePadding := make([]byte, hdr.getNoncePaddingLen())
+	_, err = file.Write(noncePadding)
+	if err != nil {
+		return fmt.Errorf("Write file : %w", err)
+	}
 
 	// ciphertext
 	_, err = file.Write(ciphertext)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Write file : %w", err)
+	}
 
 	return nil
 }
@@ -67,10 +88,14 @@ func (hdr *GcmFc) encrypt(fname string, key []byte, cleartext interface{}) error
 func (hdr GcmFc) decrypt(block, key []byte) (interface{}, error) {
 	// init cypher
 	cypher, err := aes.NewCipher(key)
-	checkError(err)
+	if err != nil {
+		return nil, fmt.Errorf("NewCipher : %w", err)
+	}
 
 	gcmDecrypt, err := cipher.NewGCM(cypher)
-	checkError(err)
+	if err != nil {
+		return nil, fmt.Errorf("NewGCM : %w", err)
+	}
 
 	// read nonce
 	nonce := block[:hdr.noncesize]
@@ -79,6 +104,9 @@ func (hdr GcmFc) decrypt(block, key []byte) (interface{}, error) {
 
 	// decrypt and authenticate
 	plaintext, err := gcmDecrypt.Open(nil, nonce, encrypted_pld, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Open : %w", err)
+	}
 
 	if err == nil {
 		// decode bytestream to struct
@@ -86,7 +114,7 @@ func (hdr GcmFc) decrypt(block, key []byte) (interface{}, error) {
 		return decoded_data, err
 
 	} else {
-		return nil, err
+		return nil, fmt.Errorf("interfaceDecode : %w", err)
 	}
 
 }

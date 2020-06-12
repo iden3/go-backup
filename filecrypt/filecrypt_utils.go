@@ -77,17 +77,10 @@ func openFileR(fname string) (*os.File, error) {
 	return file, err
 }
 
-// Check errors
-func checkError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func readNBytesFromFile(f *os.File, n int) ([]byte, error) {
 	buf := make([]byte, n)
-	bytes_read, err := f.Read(buf)
-	if bytes_read < n || err != nil {
+	bytesRead, err := f.Read(buf)
+	if bytesRead < n || err != nil {
 		return nil, errors.New("Incorrect file format")
 	}
 	return buf, nil

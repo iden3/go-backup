@@ -10,9 +10,9 @@ import (
 
 func TestShamirOK(t *testing.T) {
 	// Generate Shamir config
-	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_FP
+	var minShares, maxShares, prime = 3, 6, ff.FF_BN256_FP
 	var cfg Shamir
-	err := cfg.NewConfig(min_shares, max_shares, prime)
+	err := cfg.NewConfig(minShares, maxShares, prime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,24 +31,24 @@ func TestShamirOK(t *testing.T) {
 	}
 	// Marshal/Unmarshal shares
 	for _, share := range shares {
-		share_byte := share.Marshal(ff.FF_BN256_FP)
-		share_rec := &Share{}
-		share_rec, err = share_rec.Unmarshal(share_byte)
-		if err != nil || !reflect.DeepEqual(*share_rec, share) {
+		shareByte := share.Marshal(ff.FF_BN256_FP)
+		shareRec := &Share{}
+		shareRec, err = shareRec.Unmarshal(shareByte)
+		if err != nil || !reflect.DeepEqual(*shareRec, share) {
 			t.Error("Error in Marshall/Unmarshal")
 		}
 	}
 
 	// select shares to regenerate secret
 	for iter := 0; iter < 10; iter++ {
-		selected_shares := shuffleShares(shares, min_shares)
+		selectedShares := shuffleShares(shares, minShares)
 
 		// generate key
-		new_secret, err3 := cfg.GenerateSecret(selected_shares)
+		newSecret, err3 := cfg.GenerateSecret(selectedShares)
 		if err3 != nil {
 			t.Error(err3)
 		}
-		if !secret.Equal(new_secret) {
+		if !secret.Equal(newSecret) {
 			t.Error("Secrets not equal")
 		}
 	}
@@ -56,9 +56,9 @@ func TestShamirOK(t *testing.T) {
 
 func TestShamirKO(t *testing.T) {
 	// Generate Shamir config
-	var min_shares, max_shares, prime = 3, 6, ff.FF_BN256_FQ
+	var minShares, maxShares, prime = 3, 6, ff.FF_BN256_FQ
 	var cfg Shamir
-	err := cfg.NewConfig(min_shares, max_shares, prime)
+	err := cfg.NewConfig(minShares, maxShares, prime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -74,14 +74,14 @@ func TestShamirKO(t *testing.T) {
 
 	// select insufficient shares to regenerate secret
 	for iter := 0; iter < 10; iter++ {
-		selected_shares := shuffleShares(shares, min_shares-1)
+		selectedShares := shuffleShares(shares, minShares-1)
 
 		// generate key
-		new_secret, err3 := cfg.GenerateSecret(selected_shares)
+		newSecret, err3 := cfg.GenerateSecret(selectedShares)
 		if err3 != nil {
 			t.Error(err3)
 		}
-		if secret.Equal(new_secret) {
+		if secret.Equal(newSecret) {
 			t.Error("Secrets are equal")
 		}
 	}
@@ -94,15 +94,15 @@ func shuffleShares(pool []Share, n int) []Share {
 		found := true
 		for found {
 			found = false
-			new_idx := rand.Intn(nshares)
+			newIdx := rand.Intn(nshares)
 			for _, share := range selected {
-				if share.Px == pool[new_idx].Px {
+				if share.Px == pool[newIdx].Px {
 					found = true
 					continue
 				}
 			}
 			if !found {
-				selected = append(selected, pool[new_idx])
+				selected = append(selected, pool[newIdx])
 			}
 		}
 	}
