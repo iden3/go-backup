@@ -2,6 +2,7 @@ package filecrypt
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -14,8 +15,8 @@ import (
 type NoKeyFc struct {
 	version int
 	keytype int
-	key_in  []byte
-	key_out []byte
+	keyIn   []byte
+	keyOut  []byte
 }
 
 // Hdr format
@@ -33,18 +34,18 @@ func (hdr *NoKeyFc) FillHdr(Version, Keytype int) error {
 
 	hdr.version = Version
 	hdr.keytype = Keytype
-	hdr.key_in = nil
-	hdr.key_out = nil
+	hdr.keyIn = nil
+	hdr.keyOut = nil
 
 	return nil
 }
 
 // from bytes to Hdr struct
-func (hdr *NoKeyFc) fromBytes(hdr_bytes []byte) {
-	hdr.version = int(hdr_bytes[FC_HDR_VERSION_OFFSET])
-	hdr.keytype = int(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-	hdr.key_in = nil
-	hdr.key_out = nil
+func (hdr *NoKeyFc) fromBytes(hdrBytes []byte) {
+	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
+	hdr.keytype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	hdr.keyIn = nil
+	hdr.keyOut = nil
 }
 
 // From HDR struct to bytes
@@ -56,27 +57,33 @@ func (hdr NoKeyFc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *NoKeyFc) retrieveKey(key_in, d []byte, f *os.File) ([]byte, error) {
+func (hdr *NoKeyFc) retrieveKey(keyIn, d []byte, f *os.File) ([]byte, error) {
 	return nil, nil
 }
 
 func (hdr *NoKeyFc) generateKey(fname string) ([]byte, error) {
 	// in Tx mode, out key is not available
-	if hdr.key_out == nil {
+	if hdr.keyOut == nil {
 		// Generate key
 		fhdr, err := hdr.toBytes()
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("toBytes : %w", err)
+		}
 
 		// Create file
 		file, err := openFileW(fname)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Open file : %w", err)
+		}
 		defer file.Close()
 
 		// write header to file
 		_, err = file.Write(fhdr)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Write file : %w", err)
+		}
 
-		hdr.key_out = make([]byte, 1)
+		hdr.keyOut = make([]byte, 1)
 	}
 
 	return nil, nil

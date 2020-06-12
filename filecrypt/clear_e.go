@@ -2,7 +2,9 @@
 
 package filecrypt
 
-import ()
+import (
+	"fmt"
+)
 
 type ClearFc struct {
 	fchdr
@@ -11,34 +13,44 @@ type ClearFc struct {
 func (hdr *ClearFc) encrypt(fname string, key []byte, cleartext interface{}) error {
 	// Encode cleartext to byte stream
 	bytestream, err := interfaceEncode(cleartext)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("interfaceEncode : %w", err)
+	}
 
 	// Start writing to file
 	hdr.setNBlocks(len(bytestream))
 
 	fhdr, err := hdr.toBytes()
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("toBytes : %w", err)
+	}
 
 	// Append to file
 	file, err := openFileA(fname)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("toBytes : %w", err)
+	}
 	defer file.Close()
 
 	// write header to file
 	_, err = file.Write(fhdr)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("File write : %w", err)
+	}
 
 	// bytestream
 	_, err = file.Write(bytestream)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("File write : %w", err)
+	}
 
 	return nil
 }
 
 func (c ClearFc) decrypt(plaintext, key []byte) (interface{}, error) {
 	// decode bytestream to struct
-	decoded_data, err := interfaceDecode(plaintext)
+	decodedData, err := interfaceDecode(plaintext)
 
-	//return decoded_data, err
-	return decoded_data, err
+	//return decodedData, err
+	return decodedData, err
 }

@@ -74,33 +74,33 @@ func encodeType(dtype int) {
 
 // Transform share encoding to string
 func encodeShareToString(shares []secret.Share, folder string) string {
-	tmp_fname := folder + "share-tmp.dat"
-	encodeShare(shares, tmp_fname)
-	defer os.Remove(tmp_fname)
+	tmpFname := folder + "share-tmp.dat"
+	encodeShare(shares, tmpFname)
+	defer os.Remove(tmpFname)
 
 	// Read file with share as as a bytestream and convert it to string
-	share_bytes, err := ioutil.ReadFile(tmp_fname)
+	shareBytes, err := ioutil.ReadFile(tmpFname)
 	if err != nil {
 		panic(err)
 	}
-	share_string := string(share_bytes)
+	shareString := string(shareBytes)
 
-	return share_string
+	return shareString
 }
 
 // Transform share encoding to []byte
 func encodeShareToByte(shares []secret.Share, folder string) []byte {
-	tmp_fname := folder + "share-tmp.dat"
-	encodeShare(shares, tmp_fname)
-	defer os.Remove(tmp_fname)
-	data := readBinaryFile(tmp_fname)
+	tmpFname := folder + "share-tmp.dat"
+	encodeShare(shares, tmpFname)
+	defer os.Remove(tmpFname)
+	data := readBinaryFile(tmpFname)
 
 	return data
 }
 
 // Read file
-func readBinaryFile(tmp_fname string) []byte {
-	file, err := os.Open(tmp_fname)
+func readBinaryFile(tmpFname string) []byte {
+	file, err := os.Open(tmpFname)
 	defer file.Close()
 
 	if err != nil {
@@ -125,21 +125,21 @@ func readBinaryFile(tmp_fname string) []byte {
 // filecrpyt bytestream
 func encodeShare(shares []secret.Share, fname string) {
 	// Key header -> no key
-	hdr_k := &fc.NoKeyFc{}
-	err := hdr_k.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
+	hdrK := &fc.NoKeyFc{}
+	err := hdrK.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
 	if err != nil {
 		panic(err)
 	}
 	// Encryption header -> not encrypted
-	hdr_e := &fc.ClearFc{}
-	err = hdr_e.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
+	hdrE := &fc.ClearFc{}
+	err = hdrE.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
 		fc.FC_BSIZE_BYTES_256, fc.FC_HDR_BIDX_SINGLE)
 	if err != nil {
 		panic(err)
 	}
 	// filecrypt only outputs a file. At some point, functionality should be extended
 	// to also generate a string
-	err = fc.Encrypt(hdr_k, hdr_e, fname, shares)
+	err = fc.Encrypt(hdrK, hdrE, fname, shares)
 	if err != nil {
 		panic(err)
 	}
@@ -149,28 +149,28 @@ func encodeShare(shares []secret.Share, fname string) {
 func DecodeUnencrypted(fname string) error {
 	info := decode(fname, nil)
 
-	rx_custodians := retrieveCustodians(info)
+	rxCustodians := retrieveCustodians(info)
 
-	if rx_custodians == nil {
+	if rxCustodians == nil {
 		return errors.New("Invalid Custodian Format")
 	} else {
 		initCustodians()
 		custodians := GetCustodians()
-		custodians.Data = rx_custodians
+		custodians.Data = rxCustodians
 		SetCustodians(custodians)
 	}
 
-	rx_secret_cfg := retrieveSSharing(info)
+	rxSecretCfg := retrieveSSharing(info)
 
-	if rx_secret_cfg == nil {
+	if rxSecretCfg == nil {
 		return errors.New("Invalid Secret Sharing Format")
 	} else {
 		initSecretCfg()
-		secret_cfg := GetSecretCfg()
-		secret_cfg.Min_shares = rx_secret_cfg.GetMinShares()
-		secret_cfg.Max_shares = rx_secret_cfg.GetMaxShares()
-		secret_cfg.Element_type = rx_secret_cfg.GetElType()
-		SetSecretCfg(secret_cfg)
+		secretCfg := GetSecretCfg()
+		secretCfg.MinShares = rxSecretCfg.GetMinShares()
+		secretCfg.MaxShares = rxSecretCfg.GetMaxShares()
+		secretCfg.ElementType = rxSecretCfg.GetElType()
+		SetSecretCfg(secretCfg)
 	}
 
 	return nil
@@ -180,34 +180,34 @@ func DecodeEncrypted(fname string) error {
 	key := GetkOp()
 	info := decode(fname, key)
 
-	retrieved_wallet := retrieveWallet(info)
-	if retrieved_wallet == nil {
+	retrievedWallet := retrieveWallet(info)
+	if retrievedWallet == nil {
 		return errors.New("Invalid Wallet Format")
 	} else {
-		SetWallet(retrieved_wallet)
+		SetWallet(retrievedWallet)
 	}
 
-	retrieved_shares := retrieveShares(info)
-	if retrieved_shares == nil {
+	retrievedShares := retrieveShares(info)
+	if retrievedShares == nil {
 		return errors.New("Invalid shares Format")
 	} else {
 		shares := GetShares()
-		shares.Data = fromShares(retrieved_shares)
+		shares.Data = fromShares(retrievedShares)
 		SetShares(shares)
 	}
 
-	retrieved_private_keys := retrievePrivateKeys(info)
-	if retrieved_private_keys == nil {
+	retrievedPrivateKeys := retrievePrivateKeys(info)
+	if retrievedPrivateKeys == nil {
 		return errors.New("Invalid Private Keys Format")
 	} else {
-		SetPrivateKeys(retrieved_private_keys)
+		SetPrivateKeys(retrievedPrivateKeys)
 	}
 
-	retrieved_storage := retrieveStorage(info)
-	if retrieved_storage == nil {
+	retrievedStorage := retrieveStorage(info)
+	if retrievedStorage == nil {
 		return errors.New("Invalid Storage Format")
 	} else {
-		SetStorage(retrieved_storage)
+		SetStorage(retrievedStorage)
 	}
 
 	return nil

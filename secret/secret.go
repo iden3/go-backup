@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 
 	"github.com/iden3/go-backup/ff"
@@ -47,6 +48,12 @@ func (s *Share) Unmarshal(b []byte) (*Share, error) {
 	s.Py = s.Py.FromByte(b[PY_OFFSET:FFTYPE_OFFSET])
 
 	return s, nil
+}
+
+func (s *Share) Hash(primeF int) []byte {
+	sharesByte := s.Marshal(primeF)
+	sharesHash := sha256.Sum256(sharesByte)
+	return sharesHash[:]
 }
 
 // Secret Sharing protocols implemented

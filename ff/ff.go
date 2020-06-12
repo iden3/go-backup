@@ -114,8 +114,8 @@ func FromInterface(i1 interface{}, t int) (Element, error) {
 }
 
 // Check if Element belongs to a known type
-func IsValid(element_type int) bool {
-	switch element_type {
+func IsValid(elType int) bool {
+	switch elType {
 	case FF_BN256_FP:
 		return true
 

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type RsaFc struct {
@@ -23,9 +24,11 @@ func (hdr *RsaFc) encrypt(fname string, key []byte, cleartext interface{}) error
 	}
 	// Encode cleartext to byte stream
 	bytestream, err := interfaceEncode(cleartext)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("interfaceEncode : %w", err)
+	}
 
-	if fc_bsize[hdr.blocksize] <= len(bytestream) {
+	if fcBsize[hdr.blocksize] <= len(bytestream) {
 		return errors.New("cleartext longer than key len")
 	}
 
@@ -37,20 +40,28 @@ func (hdr *RsaFc) encrypt(fname string, key []byte, cleartext interface{}) error
 	hdr.setNBlocks(len(ciphertext))
 
 	fhdr, err := hdr.toBytes()
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("toByte : %w", err)
+	}
 
 	// Append to file
 	file, err := openFileA(fname)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Open file: %w", err)
+	}
 	defer file.Close()
 
 	// write header to file
 	_, err = file.Write(fhdr)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Write file: %w", err)
+	}
 
 	// ciphertext
 	_, err = file.Write(ciphertext)
-	checkError(err)
+	if err != nil {
+		return fmt.Errorf("Write file: %w", err)
+	}
 
 	return nil
 }
@@ -71,8 +82,8 @@ func (hdr RsaFc) decrypt(ciphertext, key []byte) (interface{}, error) {
 
 	if err == nil {
 		// decode bytestream to struct
-		decoded_data, err := interfaceDecode(plaintext)
-		return decoded_data, err
+		decodedData, err := interfaceDecode(plaintext)
+		return decodedData, err
 
 	} else {
 		return nil, err

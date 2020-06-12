@@ -76,12 +76,12 @@ func storage2KV(sto db.Storage) error {
 
 func restoreStorage(folder string) (db.Storage, error) {
 	// Create empty storage
-	storage_folder := folder + "/" + FOLDER_STORE
-	err := os.Mkdir(storage_folder, 0777)
+	storageFolder := folder + "/" + FOLDER_STORE
+	err := os.Mkdir(storageFolder, 0777)
 	if err != nil {
 		return nil, err
 	}
-	sto, err := db.NewLevelDbStorage(storage_folder+STORE_FILE, false)
+	sto, err := db.NewLevelDbStorage(storageFolder+STORE_FILE, false)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +93,9 @@ func restoreStorage(folder string) (db.Storage, error) {
 		return nil, err
 	}
 	//   Retrieve copy of storage backup
-	backup_storage := GetStorage()
+	backupStorage := GetStorage()
 	//   Iterate through backup KV values and insert them to new storage
-	for _, kv := range backup_storage {
+	for _, kv := range backupStorage {
 		tx.Put(kv.K, kv.V)
 	}
 	tx.Commit()
@@ -106,21 +106,21 @@ func restoreStorage(folder string) (db.Storage, error) {
 
 func restoreKStore(folder string, params keystore.KeyStoreParams) (*keystore.KeyStore, error) {
 	// Create empty storage
-	kstorage_folder := folder + "/" + FOLDER_KSTORE
-	err := os.Mkdir(kstorage_folder, 0777)
+	kstorageFolder := folder + "/" + FOLDER_KSTORE
+	err := os.Mkdir(kstorageFolder, 0777)
 	if err != nil {
 		return nil, err
 	}
-	storage := keystore.NewFileStorage(kstorage_folder + KSTORE_FILE)
+	storage := keystore.NewFileStorage(kstorageFolder + KSTORE_FILE)
 	ks, err := keystore.NewKeyStore(storage, params)
 	if err != nil {
 		return nil, err
 	}
 
 	// Restore backup copy
-	backup_kstore := GetPrivateKeys()
+	backupKStore := GetPrivateKeys()
 	pass := GetkOp()
-	for _, pk := range backup_kstore.PK {
+	for _, pk := range backupKStore.PK {
 		_, err = ks.ImportKey(pk, pass)
 		if err != nil {
 			return nil, err

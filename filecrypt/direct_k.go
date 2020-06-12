@@ -4,6 +4,7 @@ package filecrypt
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -12,14 +13,14 @@ import (
 //  Format
 //    version    [1 Byte]
 //    keytype    [1 Byte]
-//    key_in
-//    key_out
+//    keyIn
+//    keyOut
 
 type DirectKeyFc struct {
 	version int
 	keytype int
-	key_in  []byte
-	key_out []byte
+	keyIn   []byte
+	keyOut  []byte
 }
 
 // Hdr format
@@ -28,7 +29,7 @@ const (
 )
 
 // Init Hdr Struct
-func (hdr *DirectKeyFc) FillHdr(Version, Keytype int, Key_in []byte) error {
+func (hdr *DirectKeyFc) FillHdr(Version, Keytype int, KeyIn []byte) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Keytype >= FC_KEY_NTYPE {
@@ -37,18 +38,18 @@ func (hdr *DirectKeyFc) FillHdr(Version, Keytype int, Key_in []byte) error {
 
 	hdr.version = Version
 	hdr.keytype = Keytype
-	hdr.key_in = Key_in
-	hdr.key_out = nil
+	hdr.keyIn = KeyIn
+	hdr.keyOut = nil
 
 	return nil
 }
 
 // from bytes to Hdr struct
-func (hdr *DirectKeyFc) fromBytes(hdr_bytes []byte) {
-	hdr.version = int(hdr_bytes[FC_HDR_VERSION_OFFSET])
-	hdr.keytype = int(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-	hdr.key_in = nil
-	hdr.key_out = nil
+func (hdr *DirectKeyFc) fromBytes(hdrBytes []byte) {
+	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
+	hdr.keytype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	hdr.keyIn = nil
+	hdr.keyOut = nil
 }
 
 // From HDR struct to bytes
@@ -60,29 +61,35 @@ func (hdr DirectKeyFc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *DirectKeyFc) retrieveKey(key_in, d []byte, f *os.File) ([]byte, error) {
-	return key_in, nil
+func (hdr *DirectKeyFc) retrieveKey(keyIn, d []byte, f *os.File) ([]byte, error) {
+	return keyIn, nil
 }
 
-// Key generation. In Tx, it writes info to a valid fname. In Rx, it reads key_out
+// Key generation. In Tx, it writes info to a valid fname. In Rx, it reads keyOut
 func (hdr *DirectKeyFc) generateKey(fname string) ([]byte, error) {
 	// in Tx mode, out key is not available
-	if hdr.key_out == nil {
+	if hdr.keyOut == nil {
 		// Generate key hdr
 		fhdr, err := hdr.toBytes()
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("toBytes : %w", err)
+		}
 
 		// Create file
 		file, err := openFileW(fname)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Open file : %w", err)
+		}
 		defer file.Close()
 
 		// write header to file
 		_, err = file.Write(fhdr)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Write file : %w", err)
+		}
 
-		hdr.key_out = hdr.key_in
+		hdr.keyOut = hdr.keyIn
 	}
 
-	return hdr.key_out, nil
+	return hdr.keyOut, nil
 }

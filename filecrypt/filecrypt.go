@@ -41,6 +41,7 @@ package filecrypt
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -93,7 +94,7 @@ const (
 	FC_BSIZE_BYTES_4096 = 512
 )
 
-var fc_bsize map[int]int = map[int]int{
+var fcBsize map[int]int = map[int]int{
 	FC_HDR_BSIZE_128:  FC_BSIZE_BYTES_128,
 	FC_HDR_BSIZE_256:  FC_BSIZE_BYTES_256,
 	FC_HDR_BSIZE_2048: FC_BSIZE_BYTES_2048,
@@ -104,60 +105,77 @@ var fc_bsize map[int]int = map[int]int{
 //  applies the desired encryption algorithm.
 // Encryption must be called for every filecrypt block that needs to be added to the
 // backup file
-func Encrypt(key_hdr fileCryptKey, enc_hdr fileCryptEnc, fname string, cleartext interface{}) error {
+func Encrypt(keyHdr fileCryptKey, encHdr fileCryptEnc, fname string, cleartext interface{}) error {
 	// If first block, generate and write key header
 	// else, simply retrieve key
-	key, err := key_hdr.generateKey(fname)
-	checkError(err)
+	key, err := keyHdr.generateKey(fname)
+	if err != nil {
+		return fmt.Errorf("GenerateKey : %w", err)
+	}
 
 	// Encrypt block
-	err = enc_hdr.encrypt(fname, key, cleartext)
+	err = encHdr.encrypt(fname, key, cleartext)
+	if err != nil {
+		return fmt.Errorf("Encrypt : %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // Filecrypt decryption routine. Takes some cyphertext file and based on the type of decryption
 //  specified in the header applies the desired decryption algorithm
 // Decrypt is called only once per file and will decrypt the complete file, returning a slice of
 // data structures
-func Decrypt(fname string, key_in []byte) ([]interface{}, error) {
+func Decrypt(fname string, keyIn []byte) ([]interface{}, error) {
 	// open file for reading
 	file, err := openFileR(fname)
-	checkError(err)
+	if err != nil {
+		return nil, fmt.Errorf("Open file : %w", err)
+	}
 	defer file.Close()
 	var result []interface{}
 
 	// read Key HDR (2 bytes)
-	hdr_bytes, err := readNBytesFromFile(file, FC_HDR_FCTYPE_OFFSET+1)
-	checkError(err)
+	hdrBytes, err := readNBytesFromFile(file, FC_HDR_FCTYPE_OFFSET+1)
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
 
-	var key_out []byte
+	var keyOut []byte
 	// check Key HDR Type -> If error, abort
-	key_hdr, err := getKeyFCFromType(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-	checkError(err)
+	keyHdr, err := getKeyFCFromType(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	if err != nil {
+		return nil, fmt.Errorf("getKeyFCFromType : %w", err)
+	}
 
-	key_out, err = key_hdr.retrieveKey(key_in, hdr_bytes, file)
-	for stop_decrypt := false; !stop_decrypt; {
+	keyOut, err = keyHdr.retrieveKey(keyIn, hdrBytes, file)
+	for stopDecrypt := false; !stopDecrypt; {
 		// read ENC HDR (16B) -> if error abort. We need a valid header
-		hdr_bytes, err := readNBytesFromFile(file, FC_BSIZE_BYTES_128)
-		checkError(err)
+		hdrBytes, err := readNBytesFromFile(file, FC_BSIZE_BYTES_128)
+		if err != nil {
+			return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+		}
 
-		hdr2, err := getEncFCFromType(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-		checkError(err)
+		hdr2, err := getEncFCFromType(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+		if err != nil {
+			return nil, fmt.Errorf("getEncFCFromType : %w", err)
+		}
 
-		hdr2.fromBytes(hdr_bytes)
+		hdr2.fromBytes(hdrBytes)
 
 		// Check if more blocks after this
 		if hdr2.isLasttBlock() {
-			stop_decrypt = true
+			stopDecrypt = true
 		}
 
 		// read Blocks (with nonce). If error during reading blocks abort
-		block_bytes := hdr2.getNBlockBytes()
-		block_buffer, err := readNBytesFromFile(file, block_bytes)
-		checkError(err)
+		blockBytes := hdr2.getNBlockBytes()
+		blockBuffer, err := readNBytesFromFile(file, blockBytes)
+		if err != nil {
+			return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+		}
 
-		p, err := hdr2.decrypt(block_buffer, key_out)
+		p, err := hdr2.decrypt(blockBuffer, keyOut)
 		if err == nil {
 			result = append(result, p)
 		}
@@ -167,40 +185,40 @@ func Decrypt(fname string, key_in []byte) ([]interface{}, error) {
 }
 
 func getEncFCFromType(t byte) (fileCryptEnc, error) {
-	var enc_hdr fileCryptEnc
+	var encHdr fileCryptEnc
 
 	switch t {
 	case FC_CLEAR:
-		enc_hdr = &ClearFc{}
+		encHdr = &ClearFc{}
 
 	case FC_GCM:
-		enc_hdr = &GcmFc{}
+		encHdr = &GcmFc{}
 
 	case FC_RSA:
-		enc_hdr = &RsaFc{}
+		encHdr = &RsaFc{}
 
 	default:
 		return nil, errors.New("Incorrect Filecrypt handler type")
 	}
 
-	return enc_hdr, nil
+	return encHdr, nil
 }
 
 func getKeyFCFromType(t byte) (fileCryptKey, error) {
 	// check Key HDR Type
-	var key_hdr fileCryptKey
+	var keyHdr fileCryptKey
 	switch t {
 	case FC_KEY_T_NOKEY:
-		key_hdr = &NoKeyFc{}
+		keyHdr = &NoKeyFc{}
 
 	case FC_KEY_T_DIRECT:
-		key_hdr = &DirectKeyFc{}
+		keyHdr = &DirectKeyFc{}
 
 	case FC_KEY_T_PBKDF2:
-		key_hdr = &Pbkdf2Fc{}
+		keyHdr = &Pbkdf2Fc{}
 
 	default:
 		return nil, errors.New("Invalid Key Header")
 	}
-	return key_hdr, nil
+	return keyHdr, nil
 }

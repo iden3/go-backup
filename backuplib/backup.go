@@ -17,46 +17,46 @@ type Backup struct {
 }
 
 // Summary of contents of backup file
-var backup_registry map[int]Backup
+var backupRegistry map[int]Backup
 
 // Record and register backup data structures
 func AddToBackup(t, action int) {
 	// check for duplicates
-	for idx, _ := range backup_registry {
+	for idx, _ := range backupRegistry {
 		if idx == t {
 			return
 		}
 	}
-	backup_el := newBackupElement(t, action)
-	backup_registry[t] = *backup_el
+	backupEl := newBackupElement(t, action)
+	backupRegistry[t] = *backupEl
 }
 
 func newBackupElement(t, action int) *Backup {
 	switch t {
 
 	case WALLET_CONFIG:
-		backup_el := Backup{data: GetWallet(),
+		backupEl := Backup{data: GetWallet(),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 
 	case CUSTODIAN:
-		backup_el := Backup{data: GetCustodians(),
+		backupEl := Backup{data: GetCustodians(),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 
 	case SSHARING:
-		backup_el := Backup{data: GetSecretCfgOriginal(),
+		backupEl := Backup{data: GetSecretCfgOriginal(),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 
 	case SHARES:
-		backup_el := Backup{data: toShares(GetShares()),
+		backupEl := Backup{data: toShares(GetShares()),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 
 	case PKEYS:
 		pass := GetkOp()
@@ -65,10 +65,10 @@ func newBackupElement(t, action int) *Backup {
 			return nil
 		}
 		keyStore2PK(keystore, pass)
-		backup_el := Backup{data: GetPrivateKeys(),
+		backupEl := Backup{data: GetPrivateKeys(),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 
 	case STORAGE:
 		pass := GetkOp()
@@ -77,53 +77,53 @@ func newBackupElement(t, action int) *Backup {
 			return nil
 		}
 		storage2KV(storage)
-		backup_el := Backup{data: GetStorage(),
+		backupEl := Backup{data: GetStorage(),
 			mode: action,
 		}
-		return &backup_el
+		return &backupEl
 	}
 	return nil
 }
 
 // Generate backup file
-func CreateBackup(key_t, hash_t, enc_t int, fname string) {
+func CreateBackup(keyT, hashT, encT int, fname string) {
 	key := GetkOp()
 	// Add Key -> for now, only PBKDF2 + GCM supported, but it can be expanded easily
 	//  Assume fixed PBKDF2 config. Header shared for both encrypted and non encrpyted blocks
-	hdr_k := &fc.Pbkdf2Fc{}
-	err := hdr_k.FillHdr(fc.FC_HDR_VERSION_1, key_t, hash_t,
+	hdrK := &fc.Pbkdf2Fc{}
+	err := hdrK.FillHdr(fc.FC_HDR_VERSION_1, keyT, hashT,
 		PBKDF2_NITER, fc.FC_BSIZE_BYTES_256, PBKDF2_SALTLEN, key)
 	if err != nil {
 		panic(err)
 	}
 
-	n_blocks := len(backup_registry)
-	var block_idx, bctr = 0, 0
+	nBlocks := len(backupRegistry)
+	var blockIdx, bctr = 0, 0
 
 	// There are two types of blcks defined for now:
 	// Encrypted -> PBKDF2 Key Header + GCM Enc Header
 	// Not Encrypted -> PBKDF2 Key HEader + ClearFC Enc Header
-	for _, el := range backup_registry {
+	for _, el := range backupRegistry {
 		// Check block index
-		if n_blocks == 1 {
-			block_idx = fc.FC_HDR_BIDX_SINGLE
-		} else if n_blocks == bctr+1 {
-			block_idx = fc.FC_HDR_BIDX_LAST
+		if nBlocks == 1 {
+			blockIdx = fc.FC_HDR_BIDX_SINGLE
+		} else if nBlocks == bctr+1 {
+			blockIdx = fc.FC_HDR_BIDX_LAST
 		} else if bctr == 0 {
-			block_idx = fc.FC_HDR_BIDX_FIRST
+			blockIdx = fc.FC_HDR_BIDX_FIRST
 		} else {
-			block_idx = fc.FC_HDR_BIDX_MID
+			blockIdx = fc.FC_HDR_BIDX_MID
 		}
 
 		// Add Enc Header
 		if el.mode == DONT_ENCRYPT {
-			hdr_ne := &fc.ClearFc{}
-			err = hdr_ne.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR, fc.FC_BSIZE_BYTES_256, block_idx)
-			err = fc.Encrypt(hdr_k, hdr_ne, fname, el.data)
+			hdrNE := &fc.ClearFc{}
+			err = hdrNE.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR, fc.FC_BSIZE_BYTES_256, blockIdx)
+			err = fc.Encrypt(hdrK, hdrNE, fname, el.data)
 		} else if el.mode == ENCRYPT {
-			hdr_gcm := &fc.GcmFc{}
-			err = hdr_gcm.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_GCM, fc.FC_BSIZE_BYTES_256, block_idx)
-			err = fc.Encrypt(hdr_k, hdr_gcm, fname, el.data)
+			hdrGCM := &fc.GcmFc{}
+			err = hdrGCM.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_GCM, fc.FC_BSIZE_BYTES_256, blockIdx)
+			err = fc.Encrypt(hdrK, hdrGCM, fname, el.data)
 		}
 		if err != nil {
 			panic(err)
@@ -133,5 +133,5 @@ func CreateBackup(key_t, hash_t, enc_t int, fname string) {
 }
 
 func initBackup() {
-	backup_registry = make(map[int]Backup)
+	backupRegistry = make(map[int]Backup)
 }

@@ -5,10 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"golang.org/x/crypto/pbkdf2"
 	"os"
-	//"encoding/binary"
-	//"crypto/rand"
 )
 
 /*
@@ -23,8 +22,8 @@ import (
    outlen                     [ 1 Byte ] :
    saltlen                    [ 1 Byte ] :
    salt                       [ 1 Byte ] :
-   key_in
-   key_out
+   keyIn
+   keyOut
 */
 
 const (
@@ -53,12 +52,12 @@ type Pbkdf2Fc struct {
 	outlen   int
 	saltlen  int
 	salt     []byte
-	key_in   []byte
-	key_out  []byte
+	keyIn    []byte
+	keyOut   []byte
 }
 
 // Init Hdr Struct
-func (hdr *Pbkdf2Fc) FillHdr(Version, Keytype, Hashtype, Iter, Outlen, Saltlen int, Key_in []byte) error {
+func (hdr *Pbkdf2Fc) FillHdr(Version, Keytype, Hashtype, Iter, Outlen, Saltlen int, KeyIn []byte) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Keytype >= FC_KEY_NTYPE ||
@@ -77,24 +76,24 @@ func (hdr *Pbkdf2Fc) FillHdr(Version, Keytype, Hashtype, Iter, Outlen, Saltlen i
 	hdr.outlen = Outlen
 	hdr.saltlen = Saltlen
 	hdr.salt, _ = genRandomBytes(hdr.saltlen)
-	hdr.key_in = Key_in
-	hdr.key_out = nil
+	hdr.keyIn = KeyIn
+	hdr.keyOut = nil
 
 	return nil
 }
 
 // from bytes to Hdr struct
-func (hdr *Pbkdf2Fc) fromBytes(hdr_bytes []byte) {
-	hdr.version = int(hdr_bytes[FC_HDR_VERSION_OFFSET])
-	hdr.keytype = int(hdr_bytes[FC_HDR_FCTYPE_OFFSET])
-	hdr.hdrlen = int(hdr_bytes[FC_PBKDF2HDR_LEN_OFFSET])
-	hdr.hashtype = int(hdr_bytes[FC_PBKDF2HDR_HASH_OFFSET])
-	hdr.iter = int(binary.LittleEndian.Uint32(hdr_bytes[FC_PBKDF2HDR_ITER_OFFSET:FC_PBKDF2HDR_OUTLEN_OFFSET]))
-	hdr.outlen = int(hdr_bytes[FC_PBKDF2HDR_OUTLEN_OFFSET])
-	hdr.saltlen = int(hdr_bytes[FC_PBKDF2HDR_SALTLEN_OFFSET])
-	hdr.salt = hdr_bytes[FC_PBKDF2HDR_SALT_OFFSET : FC_PBKDF2HDR_SALT_OFFSET+hdr.saltlen]
-	hdr.key_in = nil
-	hdr.key_out = nil
+func (hdr *Pbkdf2Fc) fromBytes(hdrBytes []byte) {
+	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
+	hdr.keytype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	hdr.hdrlen = int(hdrBytes[FC_PBKDF2HDR_LEN_OFFSET])
+	hdr.hashtype = int(hdrBytes[FC_PBKDF2HDR_HASH_OFFSET])
+	hdr.iter = int(binary.LittleEndian.Uint32(hdrBytes[FC_PBKDF2HDR_ITER_OFFSET:FC_PBKDF2HDR_OUTLEN_OFFSET]))
+	hdr.outlen = int(hdrBytes[FC_PBKDF2HDR_OUTLEN_OFFSET])
+	hdr.saltlen = int(hdrBytes[FC_PBKDF2HDR_SALTLEN_OFFSET])
+	hdr.salt = hdrBytes[FC_PBKDF2HDR_SALT_OFFSET : FC_PBKDF2HDR_SALT_OFFSET+hdr.saltlen]
+	hdr.keyIn = nil
+	hdr.keyOut = nil
 }
 
 // From HDR struct to bytes
@@ -115,59 +114,71 @@ func (hdr Pbkdf2Fc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *Pbkdf2Fc) retrieveKey(key_in, prev_hdr []byte, file *os.File) ([]byte, error) {
+func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, file *os.File) ([]byte, error) {
 
-	pbkdf2_len, err := readNBytesFromFile(file, 1)
-	checkError(err)
+	pbkdf2Len, err := readNBytesFromFile(file, 1)
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
 
 	// Read Remaining Hdr (discount version type and length read earlier from length)
-	pbkdf2_rem, err := readNBytesFromFile(file, int(pbkdf2_len[0])-FC_PBKDF2HDR_LEN_OFFSET-1)
-	checkError(err)
+	pbkdf2Rem, err := readNBytesFromFile(file, int(pbkdf2Len[0])-FC_PBKDF2HDR_LEN_OFFSET-1)
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
 
 	// Reassemble HDR
-	var pbkdf2_byte []byte
-	pbkdf2_byte = append(pbkdf2_byte, prev_hdr...)
-	pbkdf2_byte = append(pbkdf2_byte, pbkdf2_len...)
-	pbkdf2_byte = append(pbkdf2_byte, pbkdf2_rem...)
+	var pbkdf2Byte []byte
+	pbkdf2Byte = append(pbkdf2Byte, prevHhdr...)
+	pbkdf2Byte = append(pbkdf2Byte, pbkdf2Len...)
+	pbkdf2Byte = append(pbkdf2Byte, pbkdf2Rem...)
 
-	hdr.fromBytes(pbkdf2_byte)
-	hdr.key_in = key_in
+	hdr.fromBytes(pbkdf2Byte)
+	hdr.keyIn = keyIn
 	err = hdr.computeKey()
 
-	return hdr.key_out, nil
+	return hdr.keyOut, nil
 }
 
 func (hdr *Pbkdf2Fc) generateKey(fname string) ([]byte, error) {
 	// in Tx mode, out key is not available
-	if hdr.key_out == nil {
+	if hdr.keyOut == nil {
 		// generate header
 		fhdr, err := hdr.toBytes()
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("toBytes : %w", err)
+		}
 
 		// Create file
 		file, err := openFileW(fname)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Open file : %w", err)
+		}
 		defer file.Close()
 
 		// write header to file
 		_, err = file.Write(fhdr)
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Write file : %w", err)
+		}
 
 		// compute Key
 		err = hdr.computeKey()
-		checkError(err)
+		if err != nil {
+			return nil, fmt.Errorf("Compute Key : %w", err)
+		}
 	}
 
-	return hdr.key_out, nil
+	return hdr.keyOut, nil
 }
 
 func (hdr *Pbkdf2Fc) computeKey() error {
 	switch hdr.hashtype {
 	case FC_HASH_SHA1:
-		hdr.key_out = pbkdf2.Key(hdr.key_in, hdr.salt, hdr.iter, hdr.outlen, sha1.New)
+		hdr.keyOut = pbkdf2.Key(hdr.keyIn, hdr.salt, hdr.iter, hdr.outlen, sha1.New)
 
 	case FC_HASH_SHA256:
-		hdr.key_out = pbkdf2.Key(hdr.key_in, hdr.salt, hdr.iter, hdr.outlen, sha256.New)
+		hdr.keyOut = pbkdf2.Key(hdr.keyIn, hdr.salt, hdr.iter, hdr.outlen, sha256.New)
 
 	default:
 		return errors.New("Hash not implemented")
