@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func NewHdrKey(KeyIn []byte, params ...int) (FileCryptKey, error) {
+func NewHdrKey(KeyIn []byte, params ...int) (fileCryptKey, error) {
 	if len(params) < 2 {
 		return nil, fmt.Errorf("NewHdrKey : Incorrect params")
 	}
@@ -16,9 +16,9 @@ func NewHdrKey(KeyIn []byte, params ...int) (FileCryptKey, error) {
 
 	return hdr, err
 }
-func getKeyFCFromType(t byte) (FileCryptKey, error) {
+func getKeyFCFromType(t byte) (fileCryptKey, error) {
 	// check Key HDR Type
-	var keyHdr FileCryptKey
+	var keyHdr fileCryptKey
 	switch t {
 	case FC_KEY_T_NOKEY:
 		keyHdr = &NoKeyFc{}

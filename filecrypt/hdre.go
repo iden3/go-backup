@@ -160,7 +160,7 @@ func (hdr hdre) isLasttBlock() bool {
 	return false
 }
 
-func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (FileCryptEnc, error) {
+func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (fileCryptEnc, error) {
 	hdr, err := getEncFCFromType(byte(Fctype))
 	if err != nil {
 		return nil, fmt.Errorf("NewHdrEncrypt : %w", err)
@@ -171,8 +171,8 @@ func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (FileCryptEnc, erro
 
 }
 
-func getEncFCFromType(t byte) (FileCryptEnc, error) {
-	var encHdr FileCryptEnc
+func getEncFCFromType(t byte) (fileCryptEnc, error) {
+	var encHdr fileCryptEnc
 
 	switch t {
 	case FC_CLEAR:

@@ -113,7 +113,7 @@ var fcBsize map[int]int = map[int]int{
 //  applies the desired encryption algorithm.
 // Encryption must be called for every filecrypt block that needs to be added to the
 // backup file
-func Encrypt(keyHdr FileCryptKey, encHdr FileCryptEnc, fname string, cleartext interface{}) error {
+func Encrypt(keyHdr fileCryptKey, encHdr fileCryptEnc, fname string, cleartext interface{}) error {
 	// If first block, generate and write key header
 	// else, simply retrieve key
 	key, err := keyHdr.generateKey(fname)
