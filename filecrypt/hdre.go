@@ -3,6 +3,7 @@ package filecrypt
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -55,7 +56,7 @@ const (
 )
 
 // Filecrypt Header added to every FC block
-type fchdr struct {
+type hdre struct {
 	version       int
 	blockIdx      int
 	fctype        int
@@ -66,7 +67,7 @@ type fchdr struct {
 }
 
 // Init Hdr Struct
-func (hdr *fchdr) FillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
+func (hdr *hdre) FillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Fctype >= FC_NTYPE ||
@@ -93,13 +94,13 @@ func (hdr *fchdr) FillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 }
 
 // Add n blocks and padding last block to header
-func (hdr *fchdr) setNBlocks(nbytes int) {
+func (hdr *hdre) setNBlocks(nbytes int) {
 	hdr.nblocks = int((nbytes + fcBsize[hdr.blocksize] - 1) / fcBsize[hdr.blocksize])
 	hdr.lastBlocksize = nbytes % fcBsize[hdr.blocksize]
 }
 
 // from bytes to Hdr struct
-func (hdr *fchdr) fromBytes(hdrBytes []byte) {
+func (hdr *hdre) fromBytes(hdrBytes []byte) {
 	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
 	hdr.blockIdx = int(hdrBytes[FC_HDR_BLOCK_IDX_OFFSET])
 	hdr.fctype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
@@ -111,7 +112,7 @@ func (hdr *fchdr) fromBytes(hdrBytes []byte) {
 }
 
 // From HDR struct to bytes
-func (hdr fchdr) toBytes() ([]byte, error) {
+func (hdr hdre) toBytes() ([]byte, error) {
 	header := make([]byte, FC_BSIZE_BYTES_128)
 	header[FC_HDR_VERSION_OFFSET] = byte(hdr.version)
 	header[FC_HDR_BLOCK_IDX_OFFSET] = byte(hdr.blockIdx)
@@ -125,17 +126,17 @@ func (hdr fchdr) toBytes() ([]byte, error) {
 }
 
 // returns length of padding added to nonce to fill an integer number of blocks
-func (hdr fchdr) getNoncePaddingLen() int {
+func (hdr hdre) getNoncePaddingLen() int {
 	noncePadding := int((hdr.noncesize + fcBsize[hdr.blocksize] - 1) / fcBsize[hdr.blocksize] * fcBsize[hdr.blocksize])
 	noncePadding -= hdr.noncesize
 	return noncePadding
 }
 
-func (hdr *fchdr) setNonceSize(s int) {
+func (hdr *hdre) setNonceSize(s int) {
 	hdr.noncesize = s
 }
 
-func (hdr fchdr) getNBlockBytes() int {
+func (hdr hdre) getNBlockBytes() int {
 	blockBytes := fcBsize[hdr.blocksize] * hdr.nblocks
 	if hdr.lastBlocksize > 0 {
 		blockBytes -= (fcBsize[hdr.blocksize] - hdr.lastBlocksize)
@@ -143,7 +144,7 @@ func (hdr fchdr) getNBlockBytes() int {
 	return blockBytes
 }
 
-func (hdr fchdr) isFirstBlock() bool {
+func (hdr hdre) isFirstBlock() bool {
 	if hdr.blockIdx == FC_HDR_BIDX_FIRST ||
 		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
 		return true
@@ -151,10 +152,41 @@ func (hdr fchdr) isFirstBlock() bool {
 	return false
 }
 
-func (hdr fchdr) isLasttBlock() bool {
+func (hdr hdre) isLasttBlock() bool {
 	if hdr.blockIdx == FC_HDR_BIDX_LAST ||
 		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
 		return true
 	}
 	return false
+}
+
+func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (FileCryptEnc, error) {
+	hdr, err := getEncFCFromType(byte(Fctype))
+	if err != nil {
+		return nil, fmt.Errorf("NewHdrEncrypt : %w", err)
+	}
+	err = hdr.FillHdr(Version, Fctype, Blocksize, BlockIdx)
+
+	return hdr, err
+
+}
+
+func getEncFCFromType(t byte) (FileCryptEnc, error) {
+	var encHdr FileCryptEnc
+
+	switch t {
+	case FC_CLEAR:
+		encHdr = &ClearFc{}
+
+	case FC_GCM:
+		encHdr = &GcmFc{}
+
+	case FC_RSA:
+		encHdr = &RsaFc{}
+
+	default:
+		return nil, errors.New("Incorrect Filecrypt handler type")
+	}
+
+	return encHdr, nil
 }

@@ -20,7 +20,7 @@
 //
 //  There is only a single key header per file. All blocks use same key derivation mechanisms
 //
-//  Encryption Header Format -> defined in fchdr.go. It includes information to encrypt data. Header
+//  Encryption Header Format -> defined in hre.go. It includes information to encrypt data. Header
 //   it not encrypted. Header is 16 bytes long
 //   - Version       [1 Byte]
 //   - Block_idx     [1 Byte] Indicates if Filecrypt block is first, midle, last or single
@@ -40,26 +40,34 @@
 package filecrypt
 
 import (
-	"errors"
 	"fmt"
 	"os"
 )
 
 // Interface to describe FileCryptKey operations:
-type fileCryptKey interface {
+type FileCryptKey interface {
 	generateKey(fname string) ([]byte, error)
 	retrieveKey(key, d []byte, f *os.File) ([]byte, error)
+	toBytes() ([]byte, error)
+	fromBytes([]byte)
+	FillHdr(KeyIn []byte, Params ...int) error
 }
 
 // Interface to describe FileCryptEnc operations:
 //   Encrypt : Encrypt cleartext into a filecrypt compatible format file
 //   Decrypt : Decrypt a filecrypt file to cleartext
-type fileCryptEnc interface {
+type FileCryptEnc interface {
 	decrypt(cyphertext, key []byte) (interface{}, error)
 	encrypt(fname string, key []byte, cleartext interface{}) error
+	toBytes() ([]byte, error)
 	fromBytes([]byte)
+	isFirstBlock() bool
 	isLasttBlock() bool
+	setNBlocks(nbytes int)
 	getNBlockBytes() int
+	getNoncePaddingLen() int
+	setNonceSize(s int)
+	FillHdr(Version, Fctype, Blocksize, BlockIdx int) error
 }
 
 // KDF Supported Types
@@ -105,7 +113,7 @@ var fcBsize map[int]int = map[int]int{
 //  applies the desired encryption algorithm.
 // Encryption must be called for every filecrypt block that needs to be added to the
 // backup file
-func Encrypt(keyHdr fileCryptKey, encHdr fileCryptEnc, fname string, cleartext interface{}) error {
+func Encrypt(keyHdr FileCryptKey, encHdr FileCryptEnc, fname string, cleartext interface{}) error {
 	// If first block, generate and write key header
 	// else, simply retrieve key
 	key, err := keyHdr.generateKey(fname)
@@ -182,43 +190,4 @@ func Decrypt(fname string, keyIn []byte) ([]interface{}, error) {
 
 	}
 	return result, nil
-}
-
-func getEncFCFromType(t byte) (fileCryptEnc, error) {
-	var encHdr fileCryptEnc
-
-	switch t {
-	case FC_CLEAR:
-		encHdr = &ClearFc{}
-
-	case FC_GCM:
-		encHdr = &GcmFc{}
-
-	case FC_RSA:
-		encHdr = &RsaFc{}
-
-	default:
-		return nil, errors.New("Incorrect Filecrypt handler type")
-	}
-
-	return encHdr, nil
-}
-
-func getKeyFCFromType(t byte) (fileCryptKey, error) {
-	// check Key HDR Type
-	var keyHdr fileCryptKey
-	switch t {
-	case FC_KEY_T_NOKEY:
-		keyHdr = &NoKeyFc{}
-
-	case FC_KEY_T_DIRECT:
-		keyHdr = &DirectKeyFc{}
-
-	case FC_KEY_T_PBKDF2:
-		keyHdr = &Pbkdf2Fc{}
-
-	default:
-		return nil, errors.New("Invalid Key Header")
-	}
-	return keyHdr, nil
 }

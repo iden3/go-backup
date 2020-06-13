@@ -1,4 +1,4 @@
-package secret
+package shamir
 
 import (
 	"errors"
@@ -14,6 +14,16 @@ type Shamir struct {
 	MinShares   int
 	MaxShares   int
 	ElementType int
+}
+
+func (s Shamir) GetMinShares() int {
+	return s.MinShares
+}
+func (s Shamir) GetMaxShares() int {
+	return s.MaxShares
+}
+func (s Shamir) GetElType() int {
+	return s.ElementType
 }
 
 // Generate secret from shares S[0],...,S[N-1], where S[i] = (sx[i], sy[i]) = (x, poly(x))
@@ -89,28 +99,29 @@ func (s Shamir) GenerateShares(secret ff.Element) ([]Share, error) {
 }
 
 // Initialize Shamir's secret sharing configuration
-func (cfg *Shamir) NewConfig(minShares, maxShares, elementType int) error {
+func NewConfig(minShares, maxShares, elementType int) (*Shamir, error) {
 	var err error
+	var cfg Shamir
 
 	// check args are correct before initializing config
 	if minShares == 0 {
 		err = errors.New("Shamir's Secret Config : Minimum shares needs to be > 0")
-		return err
+		return nil, err
 	}
 	if minShares > maxShares {
 		err = errors.New("Shamir's Secret Config : Minimum shares needs to be <= than Maximum shares")
-		return err
+		return nil, err
 	}
 	if ff.IsValid(elementType) == false {
 		err = errors.New("Shamir's Secret Config : Finite Field unknown")
-		return err
+		return nil, err
 	}
 
 	cfg.MinShares = minShares
 	cfg.MaxShares = maxShares
 	cfg.ElementType = elementType
 
-	return nil
+	return &cfg, nil
 }
 
 // Generate new secret
@@ -131,14 +142,4 @@ func (s Shamir) generatePoly() []ff.Element {
 	}
 
 	return poly
-}
-
-func (s Shamir) GetMinShares() int {
-	return s.MinShares
-}
-func (s Shamir) GetMaxShares() int {
-	return s.MaxShares
-}
-func (s Shamir) GetElType() int {
-	return s.ElementType
 }

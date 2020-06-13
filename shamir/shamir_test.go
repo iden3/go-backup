@@ -1,4 +1,4 @@
-package secret
+package shamir
 
 import (
 	"math/rand"
@@ -11,8 +11,7 @@ import (
 func TestShamirOK(t *testing.T) {
 	// Generate Shamir config
 	var minShares, maxShares, prime = 3, 6, ff.FF_BN256_FP
-	var cfg Shamir
-	err := cfg.NewConfig(minShares, maxShares, prime)
+	cfg, err := NewConfig(minShares, maxShares, prime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,8 +56,7 @@ func TestShamirOK(t *testing.T) {
 func TestShamirKO(t *testing.T) {
 	// Generate Shamir config
 	var minShares, maxShares, prime = 3, 6, ff.FF_BN256_FQ
-	var cfg Shamir
-	err := cfg.NewConfig(minShares, maxShares, prime)
+	cfg, err := NewConfig(minShares, maxShares, prime)
 	if err != nil {
 		t.Error(err)
 	}

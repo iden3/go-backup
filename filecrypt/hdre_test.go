@@ -48,8 +48,7 @@ const (
 func TestFCryptClearHdr(t *testing.T) {
 
 	// Generate No Encryption Header
-	hdr := &ClearFc{}
-	err := hdr.FillHdr(TEST_VERSION, TEST0_TYPE, TEST0_BLOCK_SIZE_BYTES, TEST0_BIDX)
+	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST0_TYPE, TEST0_BLOCK_SIZE_BYTES, TEST0_BIDX)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,35 +65,24 @@ func TestFCryptClearHdr(t *testing.T) {
 	hdr2 := &ClearFc{}
 	hdr2.fromBytes(hdrBytes)
 
-	if *hdr != *hdr2 {
+	newHdr := &ClearFc{}
+	switch hdr.(type) {
+	case *ClearFc:
+		newHdr = hdr.(*ClearFc)
+	default:
 		t.Error("FC handles not equal")
-		fmt.Println("HDR1 : ", *hdr)
-		fmt.Println("HDR2  : ", *hdr2)
+	}
+	if *newHdr != *hdr2 {
+		t.Error("FC handles not equal")
+		fmt.Println("HDR1 : ", hdr)
+		fmt.Println("HDR2  : ", hdr2)
 	}
 
-	expectedHdr := ClearFc{
-		fchdr: fchdr{
-			version:       TEST_VERSION,
-			blockIdx:      TEST0_BIDX,
-			fctype:        TEST0_TYPE,
-			blocksize:     TEST0_BLOCK_SIZE,
-			noncesize:     0,
-			lastBlocksize: TEST0_LAST_BSIZE,
-			nblocks:       TEST0_NBLOCKS,
-		},
-	}
-
-	if *hdr != expectedHdr {
-		t.Error("FC handles not equal")
-		fmt.Println("Expected HDR  : ", expectedHdr)
-		fmt.Println("Obtainted HDR : ", *hdr)
-	}
 }
 
 func TestFCryptNoKeyHdr(t *testing.T) {
 	// Generate No Key Header
-	hdr := &NoKeyFc{}
-	err := hdr.FillHdr(TEST_VERSION, TEST1_TYPE)
+	hdr, err := NewHdrKey(nil, TEST_VERSION, TEST1_TYPE)
 	if err != nil {
 		t.Error(err)
 	}
@@ -109,9 +97,17 @@ func TestFCryptNoKeyHdr(t *testing.T) {
 	hdr2 := &NoKeyFc{}
 	hdr2.fromBytes(hdrBytes)
 
-	if !isNoKeyHdrEqual(hdr, hdr2) {
+	newHdr := &NoKeyFc{}
+	switch hdr.(type) {
+	case *NoKeyFc:
+		newHdr = hdr.(*NoKeyFc)
+	default:
+		t.Error(err)
+	}
+
+	if !isNoKeyHdrEqual(newHdr, hdr2) {
 		t.Error("FC handles not equal")
-		fmt.Println("HDR1 : ", *hdr)
+		fmt.Println("HDR1 : ", newHdr)
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
@@ -120,17 +116,16 @@ func TestFCryptNoKeyHdr(t *testing.T) {
 		keytype: TEST1_TYPE,
 	}
 
-	if !isNoKeyHdrEqual(hdr, expectedHdr) {
+	if !isNoKeyHdrEqual(newHdr, expectedHdr) {
 		t.Error("FC handles not equal")
 		fmt.Println("Expected HDR  : ", expectedHdr)
-		fmt.Println("Obtainted HDR : ", *hdr)
+		fmt.Println("Obtainted HDR : ", newHdr)
 	}
 }
 
 func TestFCryptGCMHdr(t *testing.T) {
 	// Generate GCM Encryption Header
-	hdr := &GcmFc{}
-	err := hdr.FillHdr(TEST_VERSION, TEST2_TYPE, TEST2_BLOCK_SIZE_BYTES, TEST2_BIDX)
+	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST2_TYPE, TEST2_BLOCK_SIZE_BYTES, TEST2_BIDX)
 
 	if err != nil {
 		t.Error(err)
@@ -152,14 +147,20 @@ func TestFCryptGCMHdr(t *testing.T) {
 	hdr2 := &GcmFc{}
 	hdr2.fromBytes(hdrBytes)
 
-	if *hdr != *hdr2 {
-		t.Error("FC handles not equal")
-		fmt.Println("HDR1 : ", *hdr)
-		fmt.Println("HDR2  : ", *hdr2)
+	switch hdr.(type) {
+	case *GcmFc:
+		newHdr := *hdr.(*GcmFc)
+		if newHdr != *hdr2 {
+			t.Error("FC handles not equal")
+			fmt.Println("HDR1 : ", newHdr)
+			fmt.Println("HDR2  : ", *hdr2)
+		}
+	default:
+		t.Error(err)
 	}
 
 	expectedHdr := GcmFc{
-		fchdr{
+		hdre{
 			version:       TEST_VERSION,
 			blockIdx:      TEST2_BIDX,
 			fctype:        TEST2_TYPE,
@@ -170,10 +171,11 @@ func TestFCryptGCMHdr(t *testing.T) {
 		},
 	}
 
-	if *hdr != expectedHdr {
+	newHdr := *hdr.(*GcmFc)
+	if newHdr != expectedHdr {
 		t.Error("FC handles not equal")
 		fmt.Println("Expected HDR  : ", expectedHdr)
-		fmt.Println("Obtainted HDR : ", *hdr)
+		fmt.Println("Obtainted HDR : ", newHdr)
 	}
 
 	//check padding was correctly computed
@@ -188,9 +190,8 @@ func TestFCryptGCMHdr(t *testing.T) {
 func TestFCryptPNoKeyHdr(t *testing.T) {
 	// Generate PBKDF2 Key Header
 	keyIn, err := genRandomBytes(TEST_KEYIN_LEN)
-	hdr := &Pbkdf2Fc{}
-	err = hdr.FillHdr(TEST_VERSION, TEST3_TYPE, TEST_HASH_TYPE,
-		TEST_ITER, TEST_OUTLEN, TEST_SALTLEN, keyIn)
+	hdr, err := NewHdrKey(keyIn, TEST_VERSION, TEST3_TYPE, TEST_HASH_TYPE,
+		TEST_ITER, TEST_OUTLEN, TEST_SALTLEN)
 	if err != nil {
 		t.Error(err)
 	}
@@ -205,9 +206,16 @@ func TestFCryptPNoKeyHdr(t *testing.T) {
 	hdr2 := &Pbkdf2Fc{}
 	hdr2.fromBytes(hdrBytes)
 
-	if !isPbkdf2HdrEqual(hdr, hdr2) {
+	newHdr := &Pbkdf2Fc{}
+	switch hdr.(type) {
+	case *Pbkdf2Fc:
+		newHdr = hdr.(*Pbkdf2Fc)
+	default:
+		t.Error(err)
+	}
+	if !isPbkdf2HdrEqual(newHdr, hdr2) {
 		t.Error("FC handles not equal")
-		fmt.Println("HDR1 : ", *hdr)
+		fmt.Println("HDR1 : ", *newHdr)
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
@@ -221,18 +229,17 @@ func TestFCryptPNoKeyHdr(t *testing.T) {
 		saltlen:  TEST_SALTLEN,
 	}
 
-	if !isPbkdf2HdrEqual(hdr, expectedHdr) {
+	if !isPbkdf2HdrEqual(newHdr, expectedHdr) {
 		t.Error("FC handles not equal")
 		fmt.Println("Expected HDR  : ", expectedHdr)
-		fmt.Println("Obtainted HDR : ", *hdr)
+		fmt.Println("Obtainted HDR : ", *newHdr)
 	}
 }
 
 func TestFCryptDirectKeyHdr(t *testing.T) {
 	// Generate Direct Key Header
 	keyIn, err := genRandomBytes(TEST_KEYIN_LEN)
-	hdr := &DirectKeyFc{}
-	err = hdr.FillHdr(TEST_VERSION, TEST4_TYPE, keyIn)
+	hdr, err := NewHdrKey(keyIn, TEST_VERSION, TEST4_TYPE)
 	if err != nil {
 		t.Error(err)
 	}
@@ -247,9 +254,16 @@ func TestFCryptDirectKeyHdr(t *testing.T) {
 	hdr2 := &DirectKeyFc{}
 	hdr2.fromBytes(hdrBytes)
 
-	if !isDirectKeyHdrEqual(hdr, hdr2) {
+	newHdr := &DirectKeyFc{}
+	switch hdr.(type) {
+	case *DirectKeyFc:
+		newHdr = hdr.(*DirectKeyFc)
+	default:
+		t.Error(err)
+	}
+	if !isDirectKeyHdrEqual(newHdr, hdr2) {
 		t.Error("FC handles not equal")
-		fmt.Println("HDR1 : ", *hdr)
+		fmt.Println("HDR1 : ", *newHdr)
 		fmt.Println("HDR2  : ", *hdr2)
 	}
 
@@ -258,10 +272,10 @@ func TestFCryptDirectKeyHdr(t *testing.T) {
 		keytype: TEST4_TYPE,
 	}
 
-	if !isDirectKeyHdrEqual(hdr, expectedHdr) {
+	if !isDirectKeyHdrEqual(newHdr, expectedHdr) {
 		t.Error("FC handles not equal")
 		fmt.Println("Expected HDR  : ", expectedHdr)
-		fmt.Println("Obtainted HDR : ", *hdr)
+		fmt.Println("Obtainted HDR : ", *newHdr)
 	}
 }
 

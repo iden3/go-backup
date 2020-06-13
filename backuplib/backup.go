@@ -3,6 +3,7 @@
 package backuplib
 
 import (
+	"fmt"
 	fc "github.com/iden3/go-backup/filecrypt"
 )
 
@@ -86,13 +87,12 @@ func newBackupElement(t, action int) *Backup {
 }
 
 // Generate backup file
-func CreateBackup(keyT, hashT, encT int, fname string) {
+func CreateBackup(keyT, hashT, encT int, fname string) error {
 	key := GetkOp()
 	// Add Key -> for now, only PBKDF2 + GCM supported, but it can be expanded easily
 	//  Assume fixed PBKDF2 config. Header shared for both encrypted and non encrpyted blocks
-	hdrK := &fc.Pbkdf2Fc{}
-	err := hdrK.FillHdr(fc.FC_HDR_VERSION_1, keyT, hashT,
-		PBKDF2_NITER, fc.FC_BSIZE_BYTES_256, PBKDF2_SALTLEN, key)
+	hdrK, err := fc.NewHdrKey(key, fc.FC_HDR_VERSION_1, keyT, hashT,
+		PBKDF2_NITER, fc.FC_BSIZE_BYTES_256, PBKDF2_SALTLEN)
 	if err != nil {
 		panic(err)
 	}
@@ -116,20 +116,18 @@ func CreateBackup(keyT, hashT, encT int, fname string) {
 		}
 
 		// Add Enc Header
+		fcType := fc.FC_GCM
 		if el.mode == DONT_ENCRYPT {
-			hdrNE := &fc.ClearFc{}
-			err = hdrNE.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR, fc.FC_BSIZE_BYTES_256, blockIdx)
-			err = fc.Encrypt(hdrK, hdrNE, fname, el.data)
-		} else if el.mode == ENCRYPT {
-			hdrGCM := &fc.GcmFc{}
-			err = hdrGCM.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_GCM, fc.FC_BSIZE_BYTES_256, blockIdx)
-			err = fc.Encrypt(hdrK, hdrGCM, fname, el.data)
+			fcType = fc.FC_CLEAR
 		}
+		hdrE, _ := fc.NewHdrEncrypt(fc.FC_HDR_VERSION_1, fcType, fc.FC_BSIZE_BYTES_256, blockIdx)
+		err = fc.Encrypt(hdrK, hdrE, fname, el.data)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("Encrypt : %w", err)
 		}
 		bctr += 1
 	}
+	return nil
 }
 
 func initBackup() {

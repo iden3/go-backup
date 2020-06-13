@@ -1,4 +1,4 @@
-package secret
+package shamir
 
 import (
 	"crypto/sha256"
@@ -17,15 +17,6 @@ const (
 type Share struct {
 	Px int
 	Py ff.Element
-}
-
-// Interface to describe Secret Sharing :
-type SecretSharer interface {
-	GenerateSecret(shares []Share) (ff.Element, error)
-	GenerateShares(ff.Element) ([]Share, error)
-	GetMinShares() int
-	GetMaxShares() int
-	GetElType() int
 }
 
 func (s Share) Marshal(p int) []byte {
@@ -55,9 +46,3 @@ func (s *Share) Hash(primeF int) []byte {
 	sharesHash := sha256.Sum256(sharesByte)
 	return sharesHash[:]
 }
-
-// Secret Sharing protocols implemented
-const (
-	SS_SHAMIR = iota
-	SS_NSECRET
-)

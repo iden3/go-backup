@@ -5,7 +5,7 @@
 package backuplib
 
 import (
-	"github.com/iden3/go-backup/secret"
+	"github.com/iden3/go-backup/shamir"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -14,7 +14,7 @@ type BackupData struct {
 	kOp              []byte         // Key. Assumed it is derived from a password
 	wallet           *WalletConfig  // Simulated wallet configuration parameters
 	secretShares     *Shares        // Shares. Needed in case we want to continue distributing them
-	secretCfg        *secret.Shamir // Configuration osf secret sharing
+	secretCfg        *shamir.Shamir // Configuration osf secret sharing
 	secretCustodians *Custodians    // Info on custodians so that we can retrieve it later
 	pK               *PrivateKeys   // Identity private keys
 	storage          []db.KV        // Identity storage
@@ -50,7 +50,7 @@ func SetShares(data *Shares) {
 
 func GetSecretCfg() *Secret {
 	secretCfg := Secret{
-		secret.Shamir{
+		shamir.Shamir{
 			MaxShares:   dataBackup.secretCfg.GetMaxShares(),
 			MinShares:   dataBackup.secretCfg.GetMinShares(),
 			ElementType: dataBackup.secretCfg.GetElType(),
@@ -59,13 +59,13 @@ func GetSecretCfg() *Secret {
 	return &secretCfg
 }
 
-func GetSecretCfgOriginal() *secret.Shamir {
+func GetSecretCfgOriginal() *shamir.Shamir {
 	return dataBackup.secretCfg
 }
 
 func SetSecretCfg(data *Secret) {
 	if data != nil {
-		secretCfg := secret.Shamir{
+		secretCfg := shamir.Shamir{
 			MaxShares:   data.GetMaxShares(),
 			MinShares:   data.GetMinShares(),
 			ElementType: data.GetElType(),

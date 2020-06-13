@@ -9,7 +9,7 @@ package backuplib
 import (
 	"bytes"
 	"errors"
-	"github.com/iden3/go-backup/secret"
+	"github.com/iden3/go-backup/shamir"
 	qrdec "github.com/liyue201/goqr"
 	qrgen "github.com/skip2/go-qrcode"
 	"image"
@@ -56,7 +56,7 @@ func GetCustodian(n int) *Custodian {
 }
 
 // Add new Custodian and simulate the distribution of N shares
-func addCustodian(nickname, folder string, method int, shares []secret.Share, startIdx, nshares int) error {
+func addCustodian(nickname, folder string, method int, shares []shamir.Share, startIdx, nshares int) error {
 	// add info to custodian
 	newCustodian := Custodian{
 		Nickname: nickname,
@@ -64,7 +64,7 @@ func addCustodian(nickname, folder string, method int, shares []secret.Share, st
 	}
 
 	// encode share information to stream of bytes.
-	sharesArray := make([]secret.Share, 0)
+	sharesArray := make([]shamir.Share, 0)
 	sharesArray = append(sharesArray, shares[startIdx:startIdx+nshares]...)
 
 	// generate QR
@@ -122,7 +122,7 @@ func ScanQRShare(fname string) {
 }
 
 // Decode QR that includes a share, and return it a slice of maps with the index and the share
-func scanQRShare(fname string) []secret.Share {
+func scanQRShare(fname string) []shamir.Share {
 	var tmpFname string
 	if filepath.Ext(fname) == ".png" {
 		dirName := filepath.Dir(fname)

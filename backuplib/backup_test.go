@@ -91,7 +91,10 @@ func TestBackup(t *testing.T) {
 	// Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
 	//  for encrypted sections. Also not, that we can mix encrypted and non-encrpyted information in the
 	// same baclup file
-	CreateBackup(fc.FC_KEY_T_PBKDF2, fc.FC_HASH_SHA256, fc.FC_GCM, BACKUP_FILE)
+	err := CreateBackup(fc.FC_KEY_T_PBKDF2, fc.FC_HASH_SHA256, fc.FC_GCM, BACKUP_FILE)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// We lost our phone.  We need to reinstall wallet in new phone and retrieve backup
 	// from cloud services. Copy old data to check backup is done correctly and delete

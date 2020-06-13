@@ -25,7 +25,12 @@ const (
 )
 
 // Init Hdr Struct
-func (hdr *NoKeyFc) FillHdr(Version, Keytype int) error {
+func (hdr *NoKeyFc) FillHdr(KeyIn []byte, params ...int) error {
+	if len(params) != 2 {
+		return fmt.Errorf("FillHdr : Incorrect arguments")
+	}
+	Version := params[0]
+	Keytype := params[1]
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Keytype >= FC_KEY_NTYPE {

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"github.com/iden3/go-backup/ff"
 	fc "github.com/iden3/go-backup/filecrypt"
-	"github.com/iden3/go-backup/secret"
+	"github.com/iden3/go-backup/shamir"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"io/ioutil"
@@ -47,12 +47,12 @@ func encodeType(dtype int) {
 		gob.Register(el)
 
 	case SSHARING:
-		gob.Register(&secret.Shamir{})
+		gob.Register(&shamir.Shamir{})
 
 	case SHARES:
 		el1, _ := ff.NewElement(PRIME)
-		var el2 secret.Share
-		var el3 []secret.Share
+		var el2 shamir.Share
+		var el3 []shamir.Share
 		gob.Register(el1)
 		gob.Register(el2)
 		gob.Register(el3)
@@ -73,7 +73,7 @@ func encodeType(dtype int) {
 }
 
 // Transform share encoding to string
-func encodeShareToString(shares []secret.Share, folder string) string {
+func encodeShareToString(shares []shamir.Share, folder string) string {
 	tmpFname := folder + "share-tmp.dat"
 	encodeShare(shares, tmpFname)
 	defer os.Remove(tmpFname)
@@ -89,7 +89,7 @@ func encodeShareToString(shares []secret.Share, folder string) string {
 }
 
 // Transform share encoding to []byte
-func encodeShareToByte(shares []secret.Share, folder string) []byte {
+func encodeShareToByte(shares []shamir.Share, folder string) []byte {
 	tmpFname := folder + "share-tmp.dat"
 	encodeShare(shares, tmpFname)
 	defer os.Remove(tmpFname)
@@ -123,16 +123,14 @@ func readBinaryFile(tmpFname string) []byte {
 
 // Generate share blocks to distribure via secret sharing and return
 // filecrpyt bytestream
-func encodeShare(shares []secret.Share, fname string) {
+func encodeShare(shares []shamir.Share, fname string) {
 	// Key header -> no key
-	hdrK := &fc.NoKeyFc{}
-	err := hdrK.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
+	hdrK, err := fc.NewHdrKey(nil, fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
 	if err != nil {
 		panic(err)
 	}
 	// Encryption header -> not encrypted
-	hdrE := &fc.ClearFc{}
-	err = hdrE.FillHdr(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
+	hdrE, err := fc.NewHdrEncrypt(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
 		fc.FC_BSIZE_BYTES_256, fc.FC_HDR_BIDX_SINGLE)
 	if err != nil {
 		panic(err)
@@ -241,12 +239,12 @@ func retrieveCustodians(info []interface{}) []Custodian {
 }
 
 // retrieve Secret Sharing config data structure
-func retrieveSSharing(info []interface{}) secret.SecretSharer {
-	var r secret.SecretSharer
+func retrieveSSharing(info []interface{}) *shamir.Shamir {
+	var r *shamir.Shamir
 	for _, el := range info {
 		switch el.(type) {
-		case *secret.Shamir:
-			r = el.(*secret.Shamir)
+		case *shamir.Shamir:
+			r = el.(*shamir.Shamir)
 			return r
 		}
 	}
@@ -295,15 +293,15 @@ func retrieveStorage(info []interface{}) []db.KV {
 }
 
 // Retrieve shares data structure
-func retrieveShares(info []interface{}) []secret.Share {
-	r := make([]secret.Share, 0)
+func retrieveShares(info []interface{}) []shamir.Share {
+	r := make([]shamir.Share, 0)
 	for _, el := range info {
 		switch el.(type) {
-		case []secret.Share:
-			r = el.([]secret.Share)
+		case []shamir.Share:
+			r = el.([]shamir.Share)
 			return r
-		case secret.Share:
-			r = append(r, el.(secret.Share))
+		case shamir.Share:
+			r = append(r, el.(shamir.Share))
 			return r
 		}
 	}

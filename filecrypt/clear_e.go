@@ -7,7 +7,7 @@ import (
 )
 
 type ClearFc struct {
-	fchdr
+	hdre
 }
 
 func (hdr *ClearFc) encrypt(fname string, key []byte, cleartext interface{}) error {

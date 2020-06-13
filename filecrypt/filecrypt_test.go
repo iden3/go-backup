@@ -82,15 +82,13 @@ func TestFCDirectGCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	// init key hdr
-	hdrK := &DirectKeyFc{}
-	err = hdrK.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, key)
+	hdrK, err := NewHdrKey(key, TEST_VERSION, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE := &GcmFc{}
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,7 +98,7 @@ func TestFCDirectGCM(t *testing.T) {
 	}
 
 	// encrypt second block
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,7 +108,7 @@ func TestFCDirectGCM(t *testing.T) {
 	}
 
 	// encrypt last block
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -156,15 +154,13 @@ func TestFCDirectRSA(t *testing.T) {
 	privateKeyB, _ := json.Marshal(privKey)
 
 	// init key hdr
-	hdrK := &DirectKeyFc{}
-	err := hdrK.FillHdr(TEST_VERSION, FC_KEY_T_DIRECT, publicKeyB)
+	hdrK, err := NewHdrKey(publicKeyB, TEST_VERSION, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE := &RsaFc{}
-	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_FIRST)
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +170,7 @@ func TestFCDirectRSA(t *testing.T) {
 	}
 
 	// encrypt second block
-	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_MID)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -184,7 +180,7 @@ func TestFCDirectRSA(t *testing.T) {
 	}
 
 	// encrypt last block
-	err = hdrE.FillHdr(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_LAST)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -225,15 +221,13 @@ func TestFCNokeyClear(t *testing.T) {
 	gob.Register(&FCTest2{})
 
 	// init key hdr
-	hdrK := &NoKeyFc{}
-	err := hdrK.FillHdr(TEST_VERSION, FC_KEY_T_NOKEY)
+	hdrK, err := NewHdrKey(nil, TEST_VERSION, FC_KEY_T_NOKEY)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE := &ClearFc{}
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -243,7 +237,7 @@ func TestFCNokeyClear(t *testing.T) {
 	}
 
 	// encrypt second block
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -253,7 +247,7 @@ func TestFCNokeyClear(t *testing.T) {
 	}
 
 	// encrypt last block
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -297,22 +291,20 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
 
 	// init key hdr
-	hdrK := &Pbkdf2Fc{}
-	err = hdrK.FillHdr(
+	hdrK, err := NewHdrKey(
+		key,
 		TEST_VERSION,
 		FC_KEY_T_PBKDF2,
 		FC_HASH_SHA256,
 		TEST_NITER,
 		FC_BSIZE_BYTES_256,
-		TEST_SALT_LEN,
-		key)
+		TEST_SALT_LEN)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE := &GcmFc{}
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -322,7 +314,7 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	}
 
 	// encrypt second block
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -332,7 +324,7 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	}
 
 	// encrypt last block
-	err = hdrE.FillHdr(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -376,22 +368,20 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
 
 	// init key hdr
-	hdrK := &Pbkdf2Fc{}
-	err = hdrK.FillHdr(
+	hdrK, err := NewHdrKey(
+		key,
 		TEST_VERSION,
 		FC_KEY_T_PBKDF2,
 		FC_HASH_SHA256,
 		TEST_NITER,
 		FC_BSIZE_BYTES_256,
-		TEST_SALT_LEN,
-		key)
+		TEST_SALT_LEN)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE := &ClearFc{}
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
 	if err != nil {
 		t.Error(err)
 	}
@@ -401,7 +391,7 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	}
 
 	// encrypt second block
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -411,7 +401,7 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	}
 
 	// encrypt last block
-	err = hdrE.FillHdr(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
 	if err != nil {
 		t.Error(err)
 	}

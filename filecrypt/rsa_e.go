@@ -10,7 +10,7 @@ import (
 )
 
 type RsaFc struct {
-	fchdr
+	hdre
 }
 
 // Encrypt data structure and write it/append it as bytetream to a file using RSA

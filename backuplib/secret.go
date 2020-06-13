@@ -8,7 +8,7 @@ package backuplib
 
 import (
 	"github.com/iden3/go-backup/ff"
-	"github.com/iden3/go-backup/secret"
+	"github.com/iden3/go-backup/shamir"
 )
 
 type Share struct {
@@ -21,7 +21,7 @@ type Shares struct {
 }
 
 type Secret struct {
-	secret.Shamir
+	shamir.Shamir
 }
 
 func GetNShares() int {
@@ -50,12 +50,12 @@ func GenerateShares(secret []byte) {
 	SetShares(sharesMobile)
 }
 
-func toShares(shares *Shares) []secret.Share {
-	sharesGo := make([]secret.Share, 0)
+func toShares(shares *Shares) []shamir.Share {
+	sharesGo := make([]shamir.Share, 0)
 	secretConfig := GetSecretCfg()
 	for _, share := range shares.Data {
 		newEl, _ := ff.NewElement(secretConfig.GetElType())
-		newShareGo := secret.Share{Px: share.Px,
+		newShareGo := shamir.Share{Px: share.Px,
 			Py: newEl.FromByte(share.Py)}
 		sharesGo = append(sharesGo, newShareGo)
 	}
@@ -63,7 +63,7 @@ func toShares(shares *Shares) []secret.Share {
 	return sharesGo
 }
 
-func fromShares(shares []secret.Share) []Share {
+func fromShares(shares []shamir.Share) []Share {
 	sharesMobile := make([]Share, 0)
 	for _, share := range shares {
 		newShareMobile := Share{Px: share.Px,
@@ -79,8 +79,8 @@ func GenerateKey() []byte {
 	return generateKey(sharesGo, GetSecretCfg())
 }
 
-func generateKey(shares []secret.Share, sharingCfg secret.SecretSharer) []byte {
-	sharesPool := make([]secret.Share, 0)
+func generateKey(shares []shamir.Share, sharingCfg *Secret) []byte {
+	sharesPool := make([]shamir.Share, 0)
 	for _, share := range shares {
 		sharesPool = append(sharesPool, share)
 		if len(sharesPool) == sharingCfg.GetMinShares() {
@@ -97,10 +97,11 @@ func generateKey(shares []secret.Share, sharingCfg secret.SecretSharer) []byte {
 
 func initSecretCfg() {
 	var secretCfg Secret
-	err := secretCfg.NewConfig(MIN_N_SHARES, MAX_N_SHARES, PRIME)
+	cfg, err := shamir.NewConfig(MIN_N_SHARES, MAX_N_SHARES, PRIME)
 	if err != nil {
 		panic(err)
 	}
+	secretCfg.Shamir = *cfg
 	SetSecretCfg(&secretCfg)
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type GcmFc struct {
-	fchdr
+	hdre
 }
 
 // Encrypt data structure and write it/append it as bytetream to a file using GCM 128/256
