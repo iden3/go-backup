@@ -67,7 +67,7 @@ type hdre struct {
 }
 
 // Init Hdr Struct
-func (hdr *hdre) FillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
+func (hdr *hdre) fillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
 		Fctype >= FC_NTYPE ||
@@ -165,7 +165,7 @@ func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (FileCryptEnc, erro
 	if err != nil {
 		return nil, fmt.Errorf("NewHdrEncrypt : %w", err)
 	}
-	err = hdr.FillHdr(Version, Fctype, Blocksize, BlockIdx)
+	err = hdr.fillHdr(Version, Fctype, Blocksize, BlockIdx)
 
 	return hdr, err
 

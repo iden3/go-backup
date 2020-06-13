@@ -12,7 +12,7 @@ func NewHdrKey(KeyIn []byte, params ...int) (FileCryptKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getKeyFCFromType : %w", err)
 	}
-	err = hdr.FillHdr(KeyIn, params...)
+	err = hdr.fillHdr(KeyIn, params...)
 
 	return hdr, err
 }

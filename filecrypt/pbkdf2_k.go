@@ -57,9 +57,9 @@ type Pbkdf2Fc struct {
 }
 
 // Init Hdr Struct
-func (hdr *Pbkdf2Fc) FillHdr(KeyIn []byte, params ...int) error {
+func (hdr *Pbkdf2Fc) fillHdr(KeyIn []byte, params ...int) error {
 	if len(params) != 6 {
-		return fmt.Errorf("FillHdr : Incorrect arguments")
+		return fmt.Errorf("fillHdr : Incorrect arguments")
 	}
 	Version := params[0]
 	Keytype := params[1]

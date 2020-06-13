@@ -29,9 +29,9 @@ const (
 )
 
 // Init Hdr Struct
-func (hdr *DirectKeyFc) FillHdr(KeyIn []byte, params ...int) error {
+func (hdr *DirectKeyFc) fillHdr(KeyIn []byte, params ...int) error {
 	if len(params) != 2 {
-		return fmt.Errorf("FillHdr : Incorrect arguments")
+		return fmt.Errorf("fillHdr : Incorrect arguments")
 	}
 	Version := params[0]
 	Keytype := params[1]

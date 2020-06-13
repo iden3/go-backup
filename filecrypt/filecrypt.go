@@ -45,18 +45,18 @@ import (
 )
 
 // Interface to describe FileCryptKey operations:
-type FileCryptKey interface {
+type fileCryptKey interface {
 	generateKey(fname string) ([]byte, error)
 	retrieveKey(key, d []byte, f *os.File) ([]byte, error)
 	toBytes() ([]byte, error)
 	fromBytes([]byte)
-	FillHdr(KeyIn []byte, Params ...int) error
+	fillHdr(KeyIn []byte, Params ...int) error
 }
 
 // Interface to describe FileCryptEnc operations:
 //   Encrypt : Encrypt cleartext into a filecrypt compatible format file
 //   Decrypt : Decrypt a filecrypt file to cleartext
-type FileCryptEnc interface {
+type fileCryptEnc interface {
 	decrypt(cyphertext, key []byte) (interface{}, error)
 	encrypt(fname string, key []byte, cleartext interface{}) error
 	toBytes() ([]byte, error)
@@ -67,7 +67,7 @@ type FileCryptEnc interface {
 	getNBlockBytes() int
 	getNoncePaddingLen() int
 	setNonceSize(s int)
-	FillHdr(Version, Fctype, Blocksize, BlockIdx int) error
+	fillHdr(Version, Fctype, Blocksize, BlockIdx int) error
 }
 
 // KDF Supported Types
