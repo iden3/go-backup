@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 )
 
 /*
@@ -18,6 +19,29 @@ import (
    lastBlocksize             [ 1 Byte ] :  Size of last block cleartext in bytes
    nblocks                    [ 8 Bytes] :  Number of blocks
 */
+
+// Filecrypt supported encryption schemes
+const (
+	FC_CLEAR = iota // No encryption
+	FC_GCM          // GCM
+	FC_RSA
+	FC_NTYPE
+)
+
+// Supported encryption block sizes in bytes
+const (
+	FC_BSIZE_BYTES_128  = 16
+	FC_BSIZE_BYTES_256  = 32
+	FC_BSIZE_BYTES_2048 = 256
+	FC_BSIZE_BYTES_4096 = 512
+)
+
+var fcBsize map[int]int = map[int]int{
+	FC_HDR_BSIZE_128:  FC_BSIZE_BYTES_128,
+	FC_HDR_BSIZE_256:  FC_BSIZE_BYTES_256,
+	FC_HDR_BSIZE_2048: FC_BSIZE_BYTES_2048,
+	FC_HDR_BSIZE_4096: FC_BSIZE_BYTES_4096,
+}
 
 // Version (Backwards interop)
 const (
@@ -158,6 +182,23 @@ func (hdr hdre) isLasttBlock() bool {
 		return true
 	}
 	return false
+}
+
+func newHdrEncryptFromFile(file *os.File) (fileCryptEnc, error) {
+	// read ENC HDR (16B) -> if error abort. We need a valid header
+	hdrBytes, err := readNBytesFromFile(file, FC_BSIZE_BYTES_128)
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
+
+	hdrE, err := getEncFCFromType(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	if err != nil {
+		return nil, fmt.Errorf("getEncFCFromType : %w", err)
+	}
+
+	hdrE.fromBytes(hdrBytes)
+
+	return hdrE, nil
 }
 
 func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (fileCryptEnc, error) {

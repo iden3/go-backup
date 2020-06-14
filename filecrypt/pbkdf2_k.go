@@ -30,6 +30,8 @@ const (
 	FC_PBKDF2HDR_MAXITER     = 100000
 	FC_PBKDF2HDR_SALT_MAXLEN = 128
 	FC_PBKDF2HDR_OUT_MAXLEN  = 128
+	FC_PBKDF2HDR_MINPARAMS   = 2
+	FC_PBKDF2HDR_MAXPARAMS   = 6
 )
 
 // Hdr format
@@ -40,6 +42,13 @@ const (
 	FC_PBKDF2HDR_OUTLEN_OFFSET  = 8
 	FC_PBKDF2HDR_SALTLEN_OFFSET = 9
 	FC_PBKDF2HDR_SALT_OFFSET    = 10
+)
+
+const (
+	FC_PBKDF2HDR_DEF_HASH    = FC_HASH_SHA256
+	FC_PBKDF2HDR_DEF_NITER   = 60000
+	FC_PBKDF2HDR_DEF_OUTLEN  = FC_BSIZE_BYTES_256
+	FC_PBKDF2HDR_DEF_SALTLEN = 12
 )
 
 // Filecrypt Header added to every FC block
@@ -58,15 +67,27 @@ type Pbkdf2Fc struct {
 
 // Init Hdr Struct
 func (hdr *Pbkdf2Fc) fillHdr(KeyIn []byte, params ...int) error {
-	if len(params) != 6 {
+	if len(params) < FC_PBKDF2HDR_MINPARAMS || len(params) > FC_PBKDF2HDR_MAXPARAMS {
 		return fmt.Errorf("fillHdr : Incorrect arguments")
 	}
 	Version := params[0]
 	Keytype := params[1]
-	Hashtype := params[2]
-	Iter := params[3]
-	Outlen := params[4]
-	Saltlen := params[5]
+	Hashtype := FC_PBKDF2HDR_DEF_HASH
+	if len(params) > 2 {
+		Hashtype = params[2]
+	}
+	Iter := FC_PBKDF2HDR_DEF_NITER
+	if len(params) > 3 {
+		Iter = params[3]
+	}
+	Outlen := FC_PBKDF2HDR_DEF_OUTLEN
+	if len(params) > 4 {
+		Outlen = params[4]
+	}
+	Saltlen := FC_PBKDF2HDR_DEF_SALTLEN
+	if len(params) > 5 {
+		Saltlen = params[5]
+	}
 
 	// check errors
 	if Version >= FC_HDR_NVERSION ||

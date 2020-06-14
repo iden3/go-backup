@@ -22,11 +22,12 @@ type NoKeyFc struct {
 // Hdr format
 const (
 	FC_NOKEYHDR_END_OFFSET = 2
+	FC_NOKEYHDR_NPARAMS    = 2
 )
 
 // Init Hdr Struct
 func (hdr *NoKeyFc) fillHdr(KeyIn []byte, params ...int) error {
-	if len(params) != 2 {
+	if len(params) != FC_NOKEYHDR_NPARAMS {
 		return fmt.Errorf("fillHdr : Incorrect arguments")
 	}
 	Version := params[0]

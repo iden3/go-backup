@@ -26,11 +26,12 @@ type DirectKeyFc struct {
 // Hdr format
 const (
 	FC_DIRECTKEYHDR_END_OFFSET = 2
+	FC_DIRECTKEYHDR_NPARMS     = 2
 )
 
 // Init Hdr Struct
 func (hdr *DirectKeyFc) fillHdr(KeyIn []byte, params ...int) error {
-	if len(params) != 2 {
+	if len(params) != FC_DIRECTKEYHDR_NPARMS {
 		return fmt.Errorf("fillHdr : Incorrect arguments")
 	}
 	Version := params[0]

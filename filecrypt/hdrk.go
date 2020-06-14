@@ -2,7 +2,33 @@ package filecrypt
 
 import (
 	"fmt"
+	"os"
 )
+
+// KDF Supported Types
+const (
+	FC_KEY_T_NOKEY  = iota // no Key
+	FC_KEY_T_DIRECT        // DIRECT
+	FC_KEY_T_PBKDF2        // PBKDF2
+	FC_KEY_NTYPE
+)
+
+func retrieveKey(file *os.File, keyIn []byte) ([]byte, error) {
+	// read Key HDR (2 bytes)
+	hdrBytes, err := readNBytesFromFile(file, FC_HDR_FCTYPE_OFFSET+1)
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
+
+	// check Key HDR Type -> If error, abort
+	keyHdr, err := getKeyFCFromType(hdrBytes[FC_HDR_FCTYPE_OFFSET])
+	if err != nil {
+		return nil, fmt.Errorf("getKeyFCFromType : %w", err)
+	}
+
+	return keyHdr.retrieveKey(keyIn, hdrBytes, file)
+
+}
 
 func NewHdrKey(KeyIn []byte, params ...int) (fileCryptKey, error) {
 	if len(params) < 2 {
