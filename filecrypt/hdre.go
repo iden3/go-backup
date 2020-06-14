@@ -25,6 +25,7 @@ const (
 	FC_CLEAR = iota // No encryption
 	FC_GCM          // GCM
 	FC_RSA
+	FC_HASH
 	FC_NTYPE
 )
 
@@ -224,6 +225,9 @@ func getEncFCFromType(t byte) (fileCryptEnc, error) {
 
 	case FC_RSA:
 		encHdr = &RsaFc{}
+
+	case FC_HASH:
+		encHdr = &HashFc{}
 
 	default:
 		return nil, errors.New("Incorrect Filecrypt handler type")

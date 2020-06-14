@@ -430,3 +430,37 @@ func TestFCPbkdf2Clear(t *testing.T) {
 		t.Error("Encrypted and decrypted values not equal")
 	}
 }
+
+func TestFCNokeyHash(t *testing.T) {
+	// init tests data
+	testData1 := initFCTest1(12)
+
+	// register struct
+	gob.Register(&FCTest1{})
+
+	// init key hdr
+	hdrK, err := NewHdrKey(nil, TEST_VERSION, FC_KEY_T_NOKEY)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// encrypt first block
+	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_HASH, FC_BSIZE_BYTES_256, FC_HDR_BIDX_SINGLE)
+	if err != nil {
+		t.Error(err)
+	}
+	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	result, err := Decrypt("./testdata/sample1.dat", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	hash := result[0].([]byte)
+	if len(hash) != FC_BSIZE_BYTES_256 {
+		t.Error("Unexpected result length")
+	}
+
+}

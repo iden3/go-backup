@@ -73,7 +73,6 @@ type fileCryptEnc interface {
 // Hash Functions
 const (
 	FC_NOHASH = iota
-	FC_HASH_SHA1
 	FC_HASH_SHA256
 	FC_NHASH
 )

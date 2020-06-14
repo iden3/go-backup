@@ -1,7 +1,6 @@
 package filecrypt
 
 import (
-	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
@@ -205,9 +204,6 @@ func (hdr *Pbkdf2Fc) generateKey(fname string) ([]byte, error) {
 
 func (hdr *Pbkdf2Fc) computeKey() error {
 	switch hdr.hashtype {
-	case FC_HASH_SHA1:
-		hdr.keyOut = pbkdf2.Key(hdr.keyIn, hdr.salt, hdr.iter, hdr.outlen, sha1.New)
-
 	case FC_HASH_SHA256:
 		hdr.keyOut = pbkdf2.Key(hdr.keyIn, hdr.salt, hdr.iter, hdr.outlen, sha256.New)
 
