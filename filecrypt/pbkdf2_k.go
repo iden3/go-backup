@@ -179,8 +179,8 @@ func (hdr *Pbkdf2Fc) generateKey(fname string) ([]byte, error) {
 			return nil, fmt.Errorf("toBytes : %w", err)
 		}
 
-		// Create file
-		file, err := openFileW(fname)
+		// Open file
+		file, err := openFileA(fname)
 		if err != nil {
 			return nil, fmt.Errorf("Open file : %w", err)
 		}

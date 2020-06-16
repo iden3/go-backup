@@ -17,11 +17,7 @@ func TestShamirOK(t *testing.T) {
 	}
 
 	// Secret
-	secret, err1 := ff.NewElement(prime)
-	if err1 != nil {
-		t.Error(err1)
-	}
-	secret.SetRandom().ToMont()
+	secret := cfg.NewSecret()
 
 	// Generate Shares
 	shares, err2 := cfg.GenerateShares(secret)

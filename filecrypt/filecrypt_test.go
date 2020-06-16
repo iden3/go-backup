@@ -1,13 +1,13 @@
 package filecrypt
 
 import (
+	"bytes"
 	cr "crypto/rand"
 	"crypto/rsa"
 	"encoding/gob"
 	"encoding/json"
 	"math/rand"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -22,10 +22,6 @@ type FCTest1 struct {
 	T string
 }
 
-type FCTest2 struct {
-	X map[string][]byte
-}
-
 func initFCTest1(s int) *FCTest1 {
 	var testData FCTest1
 	for i := 0; i < TEST_N_ELEMS; i++ {
@@ -34,12 +30,6 @@ func initFCTest1(s int) *FCTest1 {
 	testData.T = "test1"
 
 	return &testData
-}
-
-func initFCTest2(s int) *FCTest2 {
-	var data FCTest2
-	data.X = initFCMap(s)
-	return &data
 }
 
 func initFCMap(n int) map[string][]byte {
@@ -72,51 +62,55 @@ func TestFCDirectGCM(t *testing.T) {
 	// init tests data
 	testData1 := initFCTest1(12)
 	testData2 := initFCTest1(2335)
-	testData3 := initFCTest2(4)
+	testData3 := initFCTest1(123232)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
-	gob.Register(&FCTest2{})
 
 	// init key
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
-	// init key hdr
-	hdrK, err := NewHdrKey(key, TEST_VERSION, FC_KEY_T_DIRECT)
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
-
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_GCM, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
+	err = fc.AddBlock([]byte(tags[1]), FC_GCM, testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = fc.AddBlock([]byte(tags[2]), FC_GCM, testData3)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := Decrypt("./testdata/sample1.dat", key)
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error(err)
+		}
+	}
+	result, err := newFC.DecryptAll(key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -125,7 +119,7 @@ func TestFCDirectGCM(t *testing.T) {
 	}
 	r1 := *result[0].(*FCTest1)
 	r2 := *result[1].(*FCTest1)
-	r3 := *result[2].(*FCTest2)
+	r3 := *result[2].(*FCTest1)
 
 	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
@@ -133,62 +127,79 @@ func TestFCDirectGCM(t *testing.T) {
 	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*testData3).X) {
+	if r3 != *testData3 {
 		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), key)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
 	}
 }
 
 func TestFCDirectRSA(t *testing.T) {
 	// init tests data
-	testData1 := initFCTest1(12)
-	testData2 := initFCTest1(25)
-	testData3 := initFCTest2(4)
+	testData1 := initFCTest1(40)
+	testData2 := initFCTest1(80)
+	testData3 := initFCTest1(90)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
-	gob.Register(&FCTest2{})
 
 	// init key
 	privKey, _ := rsa.GenerateKey(cr.Reader, FC_BSIZE_BYTES_2048*8)
 	publicKeyB, _ := json.Marshal(privKey.PublicKey)
 	privateKeyB, _ := json.Marshal(privKey)
 
-	// init key hdr
-	hdrK, err := NewHdrKey(publicKeyB, TEST_VERSION, FC_KEY_T_DIRECT)
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, publicKeyB, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_FIRST)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_RSA, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_MID)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
+	err = fc.AddBlock([]byte(tags[1]), FC_RSA, testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_RSA, FC_BSIZE_BYTES_2048, FC_HDR_BIDX_LAST)
+	err = fc.AddBlock([]byte(tags[2]), FC_RSA, testData3)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := Decrypt("./testdata/sample1.dat", privateKeyB)
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error("Tags are not equal")
+		}
+	}
+	result, err := newFC.DecryptAll(privateKeyB)
 	if err != nil {
 		t.Error(err)
 	}
@@ -197,7 +208,7 @@ func TestFCDirectRSA(t *testing.T) {
 	}
 	r1 := *result[0].(*FCTest1)
 	r2 := *result[1].(*FCTest1)
-	r3 := *result[2].(*FCTest2)
+	r3 := *result[2].(*FCTest1)
 
 	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
@@ -205,8 +216,20 @@ func TestFCDirectRSA(t *testing.T) {
 	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*testData3).X) {
+	if r3 != *testData3 {
 		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), privateKeyB)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
 	}
 }
 
@@ -214,48 +237,56 @@ func TestFCNokeyClear(t *testing.T) {
 	// init tests data
 	testData1 := initFCTest1(12)
 	testData2 := initFCTest1(2335)
-	testData3 := initFCTest2(4)
+	testData3 := initFCTest1(123232)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
-	gob.Register(&FCTest2{})
 
-	// init key hdr
-	hdrK, err := NewHdrKey(nil, TEST_VERSION, FC_KEY_T_NOKEY)
+	// init key
+	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
+
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, nil, FC_KEY_T_NOKEY)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_CLEAR, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
+	err = fc.AddBlock([]byte(tags[1]), FC_CLEAR, testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = fc.AddBlock([]byte(tags[2]), FC_CLEAR, testData3)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := Decrypt("./testdata/sample1.dat", nil)
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error(err)
+		}
+	}
+	result, err := newFC.DecryptAll(key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -264,7 +295,7 @@ func TestFCNokeyClear(t *testing.T) {
 	}
 	r1 := *result[0].(*FCTest1)
 	r2 := *result[1].(*FCTest1)
-	r3 := *result[2].(*FCTest2)
+	r3 := *result[2].(*FCTest1)
 
 	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
@@ -272,8 +303,20 @@ func TestFCNokeyClear(t *testing.T) {
 	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*testData3).X) {
+	if r3 != *testData3 {
 		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), key)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
 	}
 }
 
@@ -281,58 +324,56 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	// init tests data
 	testData1 := initFCTest1(12)
 	testData2 := initFCTest1(2335)
-	testData3 := initFCTest2(4)
+	testData3 := initFCTest1(123232)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
-	gob.Register(&FCTest2{})
 
 	// init key
-	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
+	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
-	// init key hdr
-	hdrK, err := NewHdrKey(
-		key,
-		TEST_VERSION,
-		FC_KEY_T_PBKDF2,
-		FC_HASH_SHA256,
-		TEST_NITER,
-		FC_BSIZE_BYTES_256,
-		TEST_SALT_LEN)
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_GCM, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
+	err = fc.AddBlock([]byte(tags[1]), FC_GCM, testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_GCM, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = fc.AddBlock([]byte(tags[2]), FC_GCM, testData3)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := Decrypt("./testdata/sample1.dat", key)
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error(err)
+		}
+	}
+	result, err := newFC.DecryptAll(key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -341,7 +382,7 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	}
 	r1 := *result[0].(*FCTest1)
 	r2 := *result[1].(*FCTest1)
-	r3 := *result[2].(*FCTest2)
+	r3 := *result[2].(*FCTest1)
 
 	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
@@ -349,8 +390,20 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*testData3).X) {
+	if r3 != *testData3 {
 		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), key)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
 	}
 }
 
@@ -358,58 +411,56 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	// init tests data
 	testData1 := initFCTest1(12)
 	testData2 := initFCTest1(2335)
-	testData3 := initFCTest2(4)
+	testData3 := initFCTest1(123232)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
-	gob.Register(&FCTest2{})
 
 	// init key
-	key, err := genRandomBytes(FC_BSIZE_BYTES_128)
+	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
-	// init key hdr
-	hdrK, err := NewHdrKey(
-		key,
-		TEST_VERSION,
-		FC_KEY_T_PBKDF2,
-		FC_HASH_SHA256,
-		TEST_NITER,
-		FC_BSIZE_BYTES_256,
-		TEST_SALT_LEN)
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_FIRST)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_CLEAR, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt second block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_MID)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData2)
+	err = fc.AddBlock([]byte(tags[1]), FC_CLEAR, testData2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt last block
-	hdrE, err = NewHdrEncrypt(TEST_VERSION, FC_CLEAR, FC_BSIZE_BYTES_256, FC_HDR_BIDX_LAST)
+	err = fc.AddBlock([]byte(tags[2]), FC_CLEAR, testData3)
 	if err != nil {
 		t.Error(err)
 	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData3)
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := Decrypt("./testdata/sample1.dat", key)
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error(err)
+		}
+	}
+	result, err := newFC.DecryptAll(key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -418,7 +469,7 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	}
 	r1 := *result[0].(*FCTest1)
 	r2 := *result[1].(*FCTest1)
-	r3 := *result[2].(*FCTest2)
+	r3 := *result[2].(*FCTest1)
 
 	if r1 != *testData1 {
 		t.Error("Encrypted and decrypted values not equal")
@@ -426,41 +477,106 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	if r2 != *testData2 {
 		t.Error("Encrypted and decrypted values not equal")
 	}
-	if !reflect.DeepEqual(r3.X, (*testData3).X) {
+	if r3 != *testData3 {
 		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), key)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
 	}
 }
 
-func TestFCNokeyHash(t *testing.T) {
+func TestFCPbkdf2ClearGCM(t *testing.T) {
 	// init tests data
 	testData1 := initFCTest1(12)
+	testData2 := initFCTest1(2335)
+	testData3 := initFCTest1(123232)
+	testData := []*FCTest1{testData1, testData2, testData3}
 
 	// register struct
 	gob.Register(&FCTest1{})
 
-	// init key hdr
-	hdrK, err := NewHdrKey(nil, TEST_VERSION, FC_KEY_T_NOKEY)
+	// init key
+	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
+
+	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
+	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// encrypt first block
-	hdrE, err := NewHdrEncrypt(TEST_VERSION, FC_HASH, FC_BSIZE_BYTES_256, FC_HDR_BIDX_SINGLE)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Encrypt(hdrK, hdrE, "./testdata/sample1.dat", testData1)
+	err = fc.AddBlock([]byte(tags[0]), FC_CLEAR, testData1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	result, err := Decrypt("./testdata/sample1.dat", nil)
+	// encrypt second block
+	err = fc.AddBlock([]byte(tags[1]), FC_GCM, testData2)
 	if err != nil {
 		t.Error(err)
 	}
-	hash := result[0].([]byte)
-	if len(hash) != FC_BSIZE_BYTES_256 {
+
+	// encrypt last block
+	err = fc.AddBlock([]byte(tags[2]), FC_CLEAR, testData3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Decode filecrypt
+	newFC, err := NewFromFile("./testdata/sample1.dat")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !bytes.Equal(fc.Nonce(), newFC.Nonce()) {
+		t.Error("Nonces not equal")
+	}
+	newTags := newFC.ListTags()
+	// Check Tags
+	for idx := 0; idx < len(tags); idx += 1 {
+		if !bytes.Equal(newTags[idx], []byte(tags[idx])) {
+			t.Error(err)
+		}
+	}
+	result, err := newFC.DecryptAll(key)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(result) != 3 {
 		t.Error("Unexpected result length")
 	}
+	r1 := *result[0].(*FCTest1)
+	r2 := *result[1].(*FCTest1)
+	r3 := *result[2].(*FCTest1)
 
+	if r1 != *testData1 {
+		t.Error("Encrypted and decrypted values not equal")
+	}
+	if r2 != *testData2 {
+		t.Error("Encrypted and decrypted values not equal")
+	}
+	if r3 != *testData3 {
+		t.Error("Encrypted and decrypted values not equal")
+	}
+
+	for idx := 0; idx < len(tags); idx += 1 {
+		result, err := newFC.DecryptSingle([]byte(tags[idx]), key)
+		if err != nil {
+			t.Error(err)
+		}
+		r := *result.(*FCTest1)
+		if r != *testData[idx] {
+			t.Error("Encrypted and decrypted values not equal")
+		}
+
+	}
 }

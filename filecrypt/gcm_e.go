@@ -42,7 +42,7 @@ func (hdr *GcmFc) encrypt(fname string, key []byte, cleartext interface{}) error
 
 	hdr.setNonceSize(len(nonce))
 	// add nblocks (including 1 block for nonce)
-	hdr.setNBlocks(len(ciphertext) + len(nonce) + hdr.getNoncePaddingLen())
+	hdr.setNBlocks(int64(len(ciphertext) + len(nonce) + hdr.getNoncePaddingLen()))
 
 	fhdr, err := hdr.toBytes()
 	if err != nil {

@@ -16,7 +16,6 @@ const (
 	TEST0_TYPE             = FC_CLEAR
 	TEST0_BLOCK_SIZE       = FC_HDR_BSIZE_128
 	TEST0_BLOCK_SIZE_BYTES = 16
-	TEST0_BIDX             = FC_HDR_BIDX_SINGLE
 	TEST0_LAST_BSIZE       = TEST_LEN % TEST0_BLOCK_SIZE_BYTES
 	TEST0_NBLOCKS          = int((TEST_LEN + TEST0_BLOCK_SIZE_BYTES - 1) / TEST0_BLOCK_SIZE_BYTES)
 
@@ -28,7 +27,6 @@ const (
 	TEST2_BLOCK_SIZE       = FC_HDR_BSIZE_256
 	TEST2_BLOCK_SIZE_BYTES = 32
 	TEST2_NONCE_PADDING    = TEST2_BLOCK_SIZE_BYTES - 12
-	TEST2_BIDX             = FC_HDR_BIDX_SINGLE
 	TEST2_TYPE             = FC_GCM
 	TEST2_LAST_BSIZE       = TEST_LEN % TEST2_BLOCK_SIZE_BYTES
 	TEST2_NBLOCKS          = int((TEST_LEN + TEST2_BLOCK_SIZE_BYTES - 1) / TEST2_BLOCK_SIZE_BYTES)
@@ -48,7 +46,7 @@ const (
 func TestFCryptClearHdr(t *testing.T) {
 
 	// Generate No Encryption Header
-	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST0_TYPE, TEST0_BLOCK_SIZE_BYTES, TEST0_BIDX)
+	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST0_TYPE, TEST0_BLOCK_SIZE_BYTES)
 	if err != nil {
 		t.Error(err)
 	}
@@ -125,7 +123,7 @@ func TestFCryptNoKeyHdr(t *testing.T) {
 
 func TestFCryptGCMHdr(t *testing.T) {
 	// Generate GCM Encryption Header
-	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST2_TYPE, TEST2_BLOCK_SIZE_BYTES, TEST2_BIDX)
+	hdr, err := NewHdrEncrypt(TEST_VERSION, TEST2_TYPE, TEST2_BLOCK_SIZE_BYTES)
 
 	if err != nil {
 		t.Error(err)
@@ -162,12 +160,11 @@ func TestFCryptGCMHdr(t *testing.T) {
 	expectedHdr := GcmFc{
 		hdre{
 			version:       TEST_VERSION,
-			blockIdx:      TEST2_BIDX,
 			fctype:        TEST2_TYPE,
 			blocksize:     TEST2_BLOCK_SIZE,
 			noncesize:     TEST2_NONCE_SIZE,
 			lastBlocksize: TEST2_LAST_BSIZE,
-			nblocks:       TEST2_NBLOCKS,
+			nblocks:       int64(TEST2_NBLOCKS),
 		},
 	}
 

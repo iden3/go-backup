@@ -2,7 +2,6 @@ package backuplib
 
 import (
 	"fmt"
-	fc "github.com/iden3/go-backup/filecrypt"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/keystore"
 	"os"
@@ -64,7 +63,7 @@ func TestBackup(t *testing.T) {
 	// assign second share
 	AddCustodian("Faustino", QR_DIR, QR, 1, 1)
 	// assign third and fourth share
-	AddCustodian("Sara Baras", QR_DIR, QR, 2, 2)
+	AddCustodian("Sara Baras", QR_DIR, NONE, 2, 2)
 	// assign 5th share
 	AddCustodian("Sergio", QR_DIR, QR, 4, 1)
 	// assign 6th share
@@ -91,7 +90,7 @@ func TestBackup(t *testing.T) {
 	// Generate Backupfile -> Here we select the Key derivation algo and the encryption mechanism used
 	//  for encrypted sections. Also not, that we can mix encrypted and non-encrpyted information in the
 	// same baclup file
-	err := CreateBackup(fc.FC_KEY_T_PBKDF2, fc.FC_HASH_SHA256, fc.FC_GCM, BACKUP_FILE)
+	err := CreateBackup(BACKUP_FILE)
 	if err != nil {
 		t.Error(err)
 	}

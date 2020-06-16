@@ -12,7 +12,6 @@ import (
   Header size : 16 bytes
   Header Format :
    version                    [ 1 Byte ] :  Header version
-   blockIdx                  [ 1 Byte ] :  Indicates type of block (first, middle, last, single)
    fctype                     [ 1 Byte ] :  Module implementing Filecrypt interface
    blocksize                  [ 1 Byte ] :  Encryption block size
    noncesize                  [ 1 Byte ] :  Nonce size in bytes
@@ -25,7 +24,6 @@ const (
 	FC_CLEAR = iota // No encryption
 	FC_GCM          // GCM
 	FC_RSA
-	FC_HASH
 	FC_NTYPE
 )
 
@@ -46,17 +44,12 @@ var fcBsize map[int]int = map[int]int{
 
 // Version (Backwards interop)
 const (
-	FC_HDR_VERSION_1 = iota
-	FC_HDR_NVERSION
+	FC_HDRE_VERSION_1 = iota
+	FC_HDRE_NVERSION
 )
 
-// block Idx
 const (
-	FC_HDR_BIDX_FIRST  = iota // first
-	FC_HDR_BIDX_MID           // middle
-	FC_HDR_BIDX_LAST          // last
-	FC_HDR_BIDX_SINGLE        // single
-	FC_HDR_NBIDX
+	FC_HDRE_DEF_VERSION = FC_HDRE_VERSION_1
 )
 
 // block size
@@ -72,31 +65,28 @@ const (
 const (
 	FC_HDR_VERSION_OFFSET        = 0
 	FC_HDR_FCTYPE_OFFSET         = 1
-	FC_HDR_BLOCK_IDX_OFFSET      = 2
-	FC_HDR_BSIZE_OFFSET          = 3
-	FC_HDR_NONCESIZE_OFFSET      = 4
-	FC_HDR_LAST_BLOCKSIZE_OFFSET = 5
-	FC_HDR_NBLOCKS_OFFSET        = 6
-	FC_HDR_END_OFFSET            = 14
+	FC_HDR_BSIZE_OFFSET          = 2
+	FC_HDR_NONCESIZE_OFFSET      = 3
+	FC_HDR_LAST_BLOCKSIZE_OFFSET = 4
+	FC_HDR_NBLOCKS_OFFSET        = 5
+	FC_HDR_END_OFFSET            = 13
 )
 
 // Filecrypt Header added to every FC block
 type hdre struct {
 	version       int
-	blockIdx      int
 	fctype        int
 	blocksize     int
 	noncesize     int
 	lastBlocksize int
-	nblocks       int
+	nblocks       int64
 }
 
 // Init Hdr Struct
-func (hdr *hdre) fillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
+func (hdr *hdre) fillHdr(Version, Fctype, Blocksize int) error {
 	// check errors
 	if Version >= FC_HDR_NVERSION ||
-		Fctype >= FC_NTYPE ||
-		BlockIdx >= FC_HDR_NBIDX {
+		Fctype >= FC_NTYPE {
 		return errors.New("Invalid arguments")
 	}
 	selKey := FC_HDR_NBSIZE
@@ -111,7 +101,6 @@ func (hdr *hdre) fillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 	}
 
 	hdr.version = Version
-	hdr.blockIdx = BlockIdx
 	hdr.fctype = Fctype
 	hdr.blocksize = selKey
 
@@ -119,20 +108,20 @@ func (hdr *hdre) fillHdr(Version, Fctype, Blocksize, BlockIdx int) error {
 }
 
 // Add n blocks and padding last block to header
-func (hdr *hdre) setNBlocks(nbytes int) {
-	hdr.nblocks = int((nbytes + fcBsize[hdr.blocksize] - 1) / fcBsize[hdr.blocksize])
-	hdr.lastBlocksize = nbytes % fcBsize[hdr.blocksize]
+func (hdr *hdre) setNBlocks(nbytes int64) {
+	bSize := int64(fcBsize[hdr.blocksize])
+	hdr.nblocks = (nbytes + bSize - int64(1)) / bSize
+	hdr.lastBlocksize = int(nbytes % bSize)
 }
 
 // from bytes to Hdr struct
 func (hdr *hdre) fromBytes(hdrBytes []byte) {
 	hdr.version = int(hdrBytes[FC_HDR_VERSION_OFFSET])
-	hdr.blockIdx = int(hdrBytes[FC_HDR_BLOCK_IDX_OFFSET])
 	hdr.fctype = int(hdrBytes[FC_HDR_FCTYPE_OFFSET])
 	hdr.blocksize = int(hdrBytes[FC_HDR_BSIZE_OFFSET])
 	hdr.noncesize = int(hdrBytes[FC_HDR_NONCESIZE_OFFSET])
 	hdr.lastBlocksize = int(hdrBytes[FC_HDR_LAST_BLOCKSIZE_OFFSET])
-	hdr.nblocks = int(binary.LittleEndian.Uint64(hdrBytes[FC_HDR_NBLOCKS_OFFSET:FC_HDR_END_OFFSET]))
+	hdr.nblocks = int64(binary.LittleEndian.Uint64(hdrBytes[FC_HDR_NBLOCKS_OFFSET:FC_HDR_END_OFFSET]))
 
 }
 
@@ -140,7 +129,6 @@ func (hdr *hdre) fromBytes(hdrBytes []byte) {
 func (hdr hdre) toBytes() ([]byte, error) {
 	header := make([]byte, FC_BSIZE_BYTES_128)
 	header[FC_HDR_VERSION_OFFSET] = byte(hdr.version)
-	header[FC_HDR_BLOCK_IDX_OFFSET] = byte(hdr.blockIdx)
 	header[FC_HDR_FCTYPE_OFFSET] = byte(hdr.fctype)
 	header[FC_HDR_BSIZE_OFFSET] = byte(hdr.blocksize)
 	header[FC_HDR_NONCESIZE_OFFSET] = byte(hdr.noncesize)
@@ -161,28 +149,12 @@ func (hdr *hdre) setNonceSize(s int) {
 	hdr.noncesize = s
 }
 
-func (hdr hdre) getNBlockBytes() int {
-	blockBytes := fcBsize[hdr.blocksize] * hdr.nblocks
+func (hdr hdre) getNBlockBytes() int64 {
+	blockBytes := int64(fcBsize[hdr.blocksize]) * hdr.nblocks
 	if hdr.lastBlocksize > 0 {
-		blockBytes -= (fcBsize[hdr.blocksize] - hdr.lastBlocksize)
+		blockBytes -= int64(fcBsize[hdr.blocksize] - hdr.lastBlocksize)
 	}
 	return blockBytes
-}
-
-func (hdr hdre) isFirstBlock() bool {
-	if hdr.blockIdx == FC_HDR_BIDX_FIRST ||
-		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
-		return true
-	}
-	return false
-}
-
-func (hdr hdre) isLasttBlock() bool {
-	if hdr.blockIdx == FC_HDR_BIDX_LAST ||
-		hdr.blockIdx == FC_HDR_BIDX_SINGLE {
-		return true
-	}
-	return false
 }
 
 func newHdrEncryptFromFile(file *os.File) (fileCryptEnc, error) {
@@ -202,12 +174,12 @@ func newHdrEncryptFromFile(file *os.File) (fileCryptEnc, error) {
 	return hdrE, nil
 }
 
-func NewHdrEncrypt(Version, Fctype, Blocksize, BlockIdx int) (fileCryptEnc, error) {
+func NewHdrEncrypt(Version, Fctype, Blocksize int) (fileCryptEnc, error) {
 	hdr, err := getEncFCFromType(byte(Fctype))
 	if err != nil {
 		return nil, fmt.Errorf("NewHdrEncrypt : %w", err)
 	}
-	err = hdr.fillHdr(Version, Fctype, Blocksize, BlockIdx)
+	err = hdr.fillHdr(Version, Fctype, Blocksize)
 
 	return hdr, err
 
@@ -226,12 +198,31 @@ func getEncFCFromType(t byte) (fileCryptEnc, error) {
 	case FC_RSA:
 		encHdr = &RsaFc{}
 
-	case FC_HASH:
-		encHdr = &HashFc{}
-
 	default:
 		return nil, errors.New("Incorrect Filecrypt handler type")
 	}
 
 	return encHdr, nil
+}
+
+func decryptBlock(file *os.File, offset int64, key []byte) (interface{}, error) {
+	// Set correct position
+	_, err := file.Seek(offset, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Seek file : %w", err)
+	}
+	// initialize Encryption Hdr
+	hdrE, err := newHdrEncryptFromFile(file)
+	if err != nil {
+		return nil, fmt.Errorf("newHdrEncryptFromFile : %w", err)
+	}
+
+	// read Blocks (with nonce). If error during reading blocks abort
+	blockBytes := hdrE.getNBlockBytes()
+	blockBuffer, err := readNBytesFromFile(file, int(blockBytes))
+	if err != nil {
+		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
+	}
+
+	return hdrE.decrypt(blockBuffer, key)
 }

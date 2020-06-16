@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"github.com/iden3/go-backup/ff"
 	fc "github.com/iden3/go-backup/filecrypt"
 	"github.com/iden3/go-backup/shamir"
@@ -123,24 +124,18 @@ func readBinaryFile(tmpFname string) []byte {
 
 // Generate share blocks to distribure via secret sharing and return
 // filecrpyt bytestream
-func encodeShare(shares []shamir.Share, fname string) {
+func encodeShare(shares []shamir.Share, fname string) error {
 	// Key header -> no key
-	hdrK, err := fc.NewHdrKey(nil, fc.FC_HDR_VERSION_1, fc.FC_KEY_T_NOKEY)
+	fileCrypt, err := fc.New(1, fname, nil, nil, fc.FC_KEY_T_NOKEY)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("New FC : %w", err)
 	}
 	// Encryption header -> not encrypted
-	hdrE, err := fc.NewHdrEncrypt(fc.FC_HDR_VERSION_1, fc.FC_CLEAR,
-		fc.FC_BSIZE_BYTES_256, fc.FC_HDR_BIDX_SINGLE)
+	err = fileCrypt.AddBlock([]byte("SHARES"), fc.FC_CLEAR, shares)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Add Block : %w", err)
 	}
-	// filecrypt only outputs a file. At some point, functionality should be extended
-	// to also generate a string
-	err = fc.Encrypt(hdrK, hdrE, fname, shares)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
 
 // Decode and decrypt file using provided key
@@ -214,7 +209,8 @@ func DecodeEncrypted(fname string) error {
 
 // Decode and decrypt file using provided key
 func decode(fname string, key []byte) []interface{} {
-	results, _ := fc.Decrypt(fname, key)
+	newFC, _ := fc.NewFromFile(fname)
+	results, _ := newFC.DecryptAll(key)
 
 	return results
 

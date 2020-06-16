@@ -1,11 +1,6 @@
 
-# Secret
-Secret Sharing library. Defines interface *SecretSharer* with the following methods:
--	GenerateSecret(shares []Share) (ff.Element, error)
--	GenerateShares(ff.Element) ([]Share, error)
--	GetMinShares() int
--	GetMaxShares() int
--	GetElType() int
+# Shamir
+Shamir Secret Sharing library. 
 
 *shamir* implements Shamir's Secret Sharing  a form of secret sharing, where a secret is divided into parts, giving each participant its own unique part.
 
@@ -26,15 +21,15 @@ import (
 )
 
 
-min_shares := 3
-max_shares := 6
+minShares := 3
+maxShares := 6
 prime := ff.FF_BN256_FP
 
 var cfg Shamir
 
 // Initialize Shamir's configuration 
 //   generate 6 shares, 3 required to retrieve secret
-err := cfg.NewConfig(min_shares, max_shares, ff.FF_BN256_FP)
+err := cfg.NewConfig(minShares, maxShares, ff.FF_BN256_FP)
 if err != nil {
 	fmt.Errorf("Incorrect Shamir's configuration")
 }
@@ -50,9 +45,9 @@ if err != nil {
 }
 
 // Regenerate secret from 3 shares
-recovered_secret, err := cfg.GenerateSecret(shares[0:2])
+revoveredSecret, err := cfg.GenerateSecret(shares[0:2])
 
-if !secret.Equal(recovered_secret) {
+if !secret.Equal(revoveredSecret) {
 	fmt.Errorf("Secrets are not equal")
 }
 ```

@@ -81,8 +81,8 @@ func (hdr *DirectKeyFc) generateKey(fname string) ([]byte, error) {
 			return nil, fmt.Errorf("toBytes : %w", err)
 		}
 
-		// Create file
-		file, err := openFileW(fname)
+		// Write file
+		file, err := openFileA(fname)
 		if err != nil {
 			return nil, fmt.Errorf("Open file : %w", err)
 		}

@@ -5,6 +5,7 @@ package backuplib
 import (
 	"fmt"
 	fc "github.com/iden3/go-backup/filecrypt"
+	"strconv"
 )
 
 const (
@@ -87,45 +88,28 @@ func newBackupElement(t, action int) *Backup {
 }
 
 // Generate backup file
-func CreateBackup(keyT, hashT, encT int, fname string) error {
+func CreateBackup(fname string) error {
 	key := GetkOp()
-	// Add Key -> for now, only PBKDF2 + GCM supported, but it can be expanded easily
-	//  Assume fixed PBKDF2 config. Header shared for both encrypted and non encrpyted blocks
-	hdrK, err := fc.NewHdrKey(key, fc.FC_HDR_VERSION_1, keyT, hashT,
-		PBKDF2_NITER, fc.FC_BSIZE_BYTES_256, PBKDF2_SALTLEN)
-	if err != nil {
-		panic(err)
-	}
-
 	nBlocks := len(backupRegistry)
-	var blockIdx, bctr = 0, 0
+	fileCrypt, err := fc.New(nBlocks, fname, nil, key, fc.FC_KEY_T_PBKDF2)
+	if err != nil {
+		return fmt.Errorf("New FC : %w", err)
+	}
 
 	// There are two types of blcks defined for now:
 	// Encrypted -> PBKDF2 Key Header + GCM Enc Header
 	// Not Encrypted -> PBKDF2 Key HEader + ClearFC Enc Header
-	for _, el := range backupRegistry {
-		// Check block index
-		if nBlocks == 1 {
-			blockIdx = fc.FC_HDR_BIDX_SINGLE
-		} else if nBlocks == bctr+1 {
-			blockIdx = fc.FC_HDR_BIDX_LAST
-		} else if bctr == 0 {
-			blockIdx = fc.FC_HDR_BIDX_FIRST
-		} else {
-			blockIdx = fc.FC_HDR_BIDX_MID
-		}
-
+	for idx, el := range backupRegistry {
 		// Add Enc Header
 		fcType := fc.FC_GCM
 		if el.mode == DONT_ENCRYPT {
 			fcType = fc.FC_CLEAR
 		}
-		hdrE, _ := fc.NewHdrEncrypt(fc.FC_HDR_VERSION_1, fcType, fc.FC_BSIZE_BYTES_256, blockIdx)
-		err = fc.Encrypt(hdrK, hdrE, fname, el.data)
+		tag := strconv.Itoa(idx)
+		err := fileCrypt.AddBlock([]byte(tag), fcType, el.data)
 		if err != nil {
 			return fmt.Errorf("Encrypt : %w", err)
 		}
-		bctr += 1
 	}
 	return nil
 }

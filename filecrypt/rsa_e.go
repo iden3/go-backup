@@ -37,7 +37,7 @@ func (hdr *RsaFc) encrypt(fname string, key []byte, cleartext interface{}) error
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rng, &publicKey, bytestream, nil)
 
 	// add nblocks (including 1 block for nonce)
-	hdr.setNBlocks(len(ciphertext))
+	hdr.setNBlocks(int64(len(ciphertext)))
 
 	fhdr, err := hdr.toBytes()
 	if err != nil {

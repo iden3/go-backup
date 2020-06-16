@@ -18,7 +18,7 @@ func (hdr *ClearFc) encrypt(fname string, key []byte, cleartext interface{}) err
 	}
 
 	// Start writing to file
-	hdr.setNBlocks(len(bytestream))
+	hdr.setNBlocks(int64(len(bytestream)))
 
 	fhdr, err := hdr.toBytes()
 	if err != nil {

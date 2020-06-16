@@ -9,8 +9,8 @@ package backuplib
 import (
 	"bytes"
 	"errors"
+	qrdec "github.com/druiz0992/goqr"
 	"github.com/iden3/go-backup/shamir"
-	qrdec "github.com/liyue201/goqr"
 	qrgen "github.com/skip2/go-qrcode"
 	"image"
 	_ "image/jpeg"
@@ -69,10 +69,10 @@ func addCustodian(nickname, folder string, method int, shares []shamir.Share, st
 
 	// generate QR
 	if method == QR {
-		shareString := encodeShareToString(sharesArray, folder)
+		shareByte := encodeShareToByte(sharesArray, folder)
 		qrfile := folder + "qr-" + nickname + ".png"
 		newCustodian.Fname = qrfile
-		err := qrgen.WriteFile(shareString, qrgen.High, 256, qrfile)
+		err := qrgen.WriteFile(string(shareByte), qrgen.High, 256, qrfile)
 		if err == nil {
 			custodians := GetCustodians()
 			custodians.Data = append(custodians.Data, newCustodian)
@@ -89,7 +89,7 @@ func addCustodian(nickname, folder string, method int, shares []shamir.Share, st
 		file.Write(shareBytes)
 		file.Close()
 		custodians := GetCustodians()
-		custodians.Data = append(SecretCustodians.Data, newCustodian)
+		custodians.Data = append(custodians.Data, newCustodian)
 		SetCustodians(custodians)
 		return nil
 
