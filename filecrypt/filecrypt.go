@@ -64,7 +64,7 @@ import (
 // Interface to describe FileCryptKey operations:
 type fileCryptKey interface {
 	generateKey(fname string) ([]byte, error)
-	retrieveKey(key, d []byte, f *os.File) ([]byte, error)
+	retrieveKey(key, d []byte, h *[]byte, f *os.File) ([]byte, error)
 	toBytes() ([]byte, error)
 	fromBytes([]byte)
 	fillHdr(KeyIn []byte, Params ...int) error
@@ -149,6 +149,7 @@ type FileCrypt struct {
 	blocks       []blockCrypt
 	msg          []byte
 	hmacKey      []byte
+	hdrK         []byte
 }
 
 // Constructor
@@ -191,7 +192,7 @@ func New(nBlocks int, fname string, hmacKey, fcKey []byte, fcKType int, params .
 		return nil, fmt.Errorf("GenerateKey : %w", err)
 	}
 	// Keep hdrk
-	fileCrypt.msg, err = hdrK.toBytes()
+	fileCrypt.hdrK, err = hdrK.toBytes()
 
 	return &fileCrypt, nil
 }
@@ -219,7 +220,7 @@ func NewFromBytes(reg []byte) *FileCrypt {
 }
 
 // Constructor from File
-func NewFromFile(fname string) (*FileCrypt, error) {
+func NewFromFile(hmacKey []byte, fname string) (*FileCrypt, error) {
 	// open file for reading
 	file, err := openFileR(fname)
 	defer file.Close()
@@ -241,6 +242,8 @@ func NewFromFile(fname string) (*FileCrypt, error) {
 	fileCrypt := NewFromBytes(buf)
 
 	fileCrypt.fname = fname
+	fileCrypt.hmacKey = make([]byte, len(hmacKey))
+	copy(fileCrypt.hmacKey, hmacKey)
 
 	return fileCrypt, nil
 }
@@ -335,9 +338,12 @@ func (fc FileCrypt) DecryptAll(keyIn []byte) ([]interface{}, error) {
 	fcLen := blockLen(fc.nBlocks) + FC_HDR_REG_BDATA_OFFSET
 
 	// Get Encryption Key
-	fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn)
+	fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn, &fc.hdrK)
 	if err != nil {
 		return nil, fmt.Errorf("retrieveKey : %w", err)
+	}
+	if !fc.CheckSeal() {
+		return nil, fmt.Errorf("HMAC doesn't match")
 	}
 
 	for blockIdx := int64(0); blockIdx < fc.nBlocks; blockIdx += 1 {
@@ -372,9 +378,12 @@ func (fc FileCrypt) DecryptSingle(tag []byte, keyIn []byte) (interface{}, error)
 
 	// Get Encryption Key If necessary
 	if fc.keyOut == nil {
-		fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn)
+		fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn, &fc.hdrK)
 		if err != nil {
 			return nil, fmt.Errorf("retrieveKey : %w", err)
+		}
+		if !fc.CheckSeal() {
+			return nil, fmt.Errorf("HMAC doesn't match")
 		}
 	}
 
@@ -515,18 +524,15 @@ func (fc FileCrypt) findTag(tag []byte) (int, error) {
 
 func (fc *FileCrypt) seal() ([]byte, error) {
 
-	newFC, err := NewFromFile(fc.fname)
-	if err != nil {
-		return nil, fmt.Errorf("newHdrEncryptFromFile : %w", err)
-	}
-	fc.msg = append(fc.msg, newFC.toBytes()...)
+	fc.msg = append(fc.msg, fc.toBytes()...)
+	fc.msg = append(fc.msg, fc.hdrK...)
 
 	file, _ := os.OpenFile(fc.fname, os.O_RDWR, 0644)
 	defer file.Close()
 	for blockIdx := int64(0); blockIdx < fc.nBlocks; blockIdx += 1 {
 		blockPosition := fc.blocks[blockIdx].offset
 		// Set correct position
-		_, err = file.Seek(int64(blockPosition), 0)
+		_, err := file.Seek(int64(blockPosition), 0)
 		if err != nil {
 			return nil, fmt.Errorf("Seek file : %w", err)
 		}
@@ -558,6 +564,7 @@ func (fc *FileCrypt) seal() ([]byte, error) {
 	}
 	p.computeKey()
 	hash := hmac.New(sha256.New, p.keyOut)
+	hash.Write(fc.msg)
 	hmac := hash.Sum(nil)
 
 	return hmac, nil

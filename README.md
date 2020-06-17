@@ -16,10 +16,10 @@ This first version includes the basic functionality to:
 
 ## Packages
 go-backup includes 4 packages:
-- ff : Finite Field Arithmetic Library based on goff (https://github.com/ConsenSys/goff). It defines an interface whose methods are implemented by  different elements created with goff.
-- secret : Secret Sharing Library
-- filecrypt : Encryption Library
-- backuplib : mobile friendly wrapper for ff, secret and filecrypt libraries
+- **ff** : Finite Field Arithmetic Library based on goff (https://github.com/ConsenSys/goff). It defines an interface whose methods are implemented by  different elements created with goff.
+- **shamir** : Shamir's Secret Sharing Library
+- **filecrypt** : Encryption Library
+- **backuplib** : mobile friendly wrapper for ff, secret and filecrypt libraries
 
 
 

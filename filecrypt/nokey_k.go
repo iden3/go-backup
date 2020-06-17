@@ -63,7 +63,8 @@ func (hdr NoKeyFc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *NoKeyFc) retrieveKey(keyIn, d []byte, f *os.File) ([]byte, error) {
+func (hdr *NoKeyFc) retrieveKey(keyIn, d []byte, h *[]byte, f *os.File) ([]byte, error) {
+	*h = d
 	return nil, nil
 }
 

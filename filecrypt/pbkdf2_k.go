@@ -144,7 +144,7 @@ func (hdr Pbkdf2Fc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, file *os.File) ([]byte, error) {
+func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, h *[]byte, file *os.File) ([]byte, error) {
 
 	pbkdf2Len, err := readNBytesFromFile(file, 1)
 	if err != nil {
@@ -166,6 +166,7 @@ func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, file *os.File) ([]byte,
 	hdr.fromBytes(pbkdf2Byte)
 	hdr.keyIn = keyIn
 	err = hdr.computeKey()
+	*h, _ = hdr.toBytes()
 
 	return hdr.keyOut, nil
 }

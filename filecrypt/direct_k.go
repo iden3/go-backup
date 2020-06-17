@@ -67,7 +67,8 @@ func (hdr DirectKeyFc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *DirectKeyFc) retrieveKey(keyIn, d []byte, f *os.File) ([]byte, error) {
+func (hdr *DirectKeyFc) retrieveKey(keyIn, d []byte, h *[]byte, f *os.File) ([]byte, error) {
+	*h = d
 	return keyIn, nil
 }
 

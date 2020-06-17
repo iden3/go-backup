@@ -72,7 +72,7 @@ func TestFCDirectGCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
-	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_DIRECT)
+	fc, err := New(3, "./testdata/sample1.dat", key, key, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
@@ -95,7 +95,7 @@ func TestFCDirectGCM(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(key, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -160,7 +160,7 @@ func TestFCDirectRSA(t *testing.T) {
 	privateKeyB, _ := json.Marshal(privKey)
 
 	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
-	fc, err := New(3, "./testdata/sample1.dat", nil, publicKeyB, FC_KEY_T_DIRECT)
+	fc, err := New(3, "./testdata/sample1.dat", publicKeyB, publicKeyB, FC_KEY_T_DIRECT)
 	if err != nil {
 		t.Error(err)
 	}
@@ -184,7 +184,7 @@ func TestFCDirectRSA(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(publicKeyB, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -271,7 +271,7 @@ func TestFCNokeyClear(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(nil, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -334,7 +334,7 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
-	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
+	fc, err := New(3, "./testdata/sample1.dat", key, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -358,7 +358,7 @@ func TestFCPbkdf2GCM(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(key, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -421,7 +421,7 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
-	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
+	fc, err := New(3, "./testdata/sample1.dat", key, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -445,7 +445,7 @@ func TestFCPbkdf2Clear(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(key, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -508,7 +508,7 @@ func TestFCPbkdf2ClearGCM(t *testing.T) {
 	key, err := genRandomBytes(FC_BSIZE_BYTES_256)
 
 	tags := [3]string{"BLOCK1", "BLOCK2", "BLOCK3"}
-	fc, err := New(3, "./testdata/sample1.dat", nil, key, FC_KEY_T_PBKDF2)
+	fc, err := New(3, "./testdata/sample1.dat", key, key, FC_KEY_T_PBKDF2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -532,7 +532,7 @@ func TestFCPbkdf2ClearGCM(t *testing.T) {
 	}
 
 	// Decode filecrypt
-	newFC, err := NewFromFile("./testdata/sample1.dat")
+	newFC, err := NewFromFile(key, "./testdata/sample1.dat")
 	if err != nil {
 		t.Error(err)
 	}
