@@ -67,9 +67,12 @@ func (hdr DirectKeyFc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *DirectKeyFc) retrieveKey(keyIn, d []byte, h *[]byte, f *os.File) ([]byte, error) {
-	*h = d
+func (hdr *DirectKeyFc) retrieveKey(keyIn, d []byte) ([]byte, error) {
 	return keyIn, nil
+}
+
+func (hdr *DirectKeyFc) retrieveKHdr(d []byte, f *os.File) ([]byte, error) {
+	return d, nil
 }
 
 // Key generation. In Tx, it writes info to a valid fname. In Rx, it reads keyOut

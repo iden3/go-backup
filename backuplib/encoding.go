@@ -12,7 +12,6 @@ import (
 	"github.com/iden3/go-backup/shamir"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"io/ioutil"
 	"os"
 )
 
@@ -73,22 +72,6 @@ func encodeType(dtype int) {
 	}
 }
 
-// Transform share encoding to string
-func encodeShareToString(shares []shamir.Share, folder string) string {
-	tmpFname := folder + "share-tmp.dat"
-	encodeShare(shares, tmpFname)
-	defer os.Remove(tmpFname)
-
-	// Read file with share as as a bytestream and convert it to string
-	shareBytes, err := ioutil.ReadFile(tmpFname)
-	if err != nil {
-		panic(err)
-	}
-	shareString := string(shareBytes)
-
-	return shareString
-}
-
 // Transform share encoding to []byte
 func encodeShareToByte(shares []shamir.Share, folder string) []byte {
 	tmpFname := folder + "share-tmp.dat"
@@ -125,7 +108,8 @@ func readBinaryFile(tmpFname string) []byte {
 // Generate share blocks to distribure via secret sharing and return
 // filecrpyt bytestream
 func encodeShare(shares []shamir.Share, fname string) error {
-	// Key header -> no key
+	// Key header -> no key (only for hmac)
+	//key := []byte("ThisIsMySecretKey")
 	fileCrypt, err := fc.New(1, fname, nil, nil, fc.FC_KEY_T_NOKEY)
 	if err != nil {
 		return fmt.Errorf("New FC : %w", err)
@@ -140,6 +124,7 @@ func encodeShare(shares []shamir.Share, fname string) error {
 
 // Decode and decrypt file using provided key
 func DecodeUnencrypted(fname string) error {
+	//key := []byte("ThisIsMySecretKey")
 	info := decode(fname, nil)
 
 	rxCustodians := retrieveCustodians(info)
@@ -209,7 +194,7 @@ func DecodeEncrypted(fname string) error {
 
 // Decode and decrypt file using provided key
 func decode(fname string, key []byte) []interface{} {
-	newFC, _ := fc.NewFromFile(fname)
+	newFC, _ := fc.NewFromFile(key, fname)
 	results, _ := newFC.DecryptAll(key)
 
 	return results

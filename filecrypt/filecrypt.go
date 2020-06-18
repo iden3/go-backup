@@ -64,7 +64,9 @@ import (
 // Interface to describe FileCryptKey operations:
 type fileCryptKey interface {
 	generateKey(fname string) ([]byte, error)
-	retrieveKey(key, d []byte, h *[]byte, f *os.File) ([]byte, error)
+	retrieveKey(key, d []byte) ([]byte, error)
+	//retrieveKey(key, d []byte, f *os.File) ([]byte, error)
+	retrieveKHdr(d []byte, f *os.File) ([]byte, error)
 	toBytes() ([]byte, error)
 	fromBytes([]byte)
 	fillHdr(KeyIn []byte, Params ...int) error
@@ -333,17 +335,17 @@ func (fc FileCrypt) DecryptAll(keyIn []byte) ([]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Open file : %w", err)
 	}
+	if fc.hmacKey != nil && !fc.checkSeal() {
+		return nil, fmt.Errorf("HMAC error")
+	}
 
 	var result []interface{}
-	fcLen := blockLen(fc.nBlocks) + FC_HDR_REG_BDATA_OFFSET
 
 	// Get Encryption Key
-	fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn, &fc.hdrK)
+	fc.keyOut, err = retrieveKey(keyIn, fc.hdrK)
+	//fc.keyOut, err = retrieveKey(int64(fcLen), keyIn, file)
 	if err != nil {
 		return nil, fmt.Errorf("retrieveKey : %w", err)
-	}
-	if !fc.CheckSeal() {
-		return nil, fmt.Errorf("HMAC doesn't match")
 	}
 
 	for blockIdx := int64(0); blockIdx < fc.nBlocks; blockIdx += 1 {
@@ -367,6 +369,9 @@ func (fc FileCrypt) DecryptSingle(tag []byte, keyIn []byte) (interface{}, error)
 	if err != nil {
 		return nil, fmt.Errorf("Exceeded number of blocks")
 	}
+	if fc.hmacKey != nil && !fc.checkSeal() {
+		return nil, fmt.Errorf("HMAC error")
+	}
 	// open file for reading
 	file, err := openFileR(fc.fname)
 	defer file.Close()
@@ -374,17 +379,13 @@ func (fc FileCrypt) DecryptSingle(tag []byte, keyIn []byte) (interface{}, error)
 		return nil, fmt.Errorf("Open file : %w", err)
 	}
 
-	fcLen := blockLen(fc.nBlocks) + FC_HDR_REG_BDATA_OFFSET
-
 	// Get Encryption Key If necessary
 	if fc.keyOut == nil {
-		fc.keyOut, err = retrieveKey(file, int64(fcLen), keyIn, &fc.hdrK)
+		fc.keyOut, err = retrieveKey(keyIn, fc.hdrK)
 		if err != nil {
 			return nil, fmt.Errorf("retrieveKey : %w", err)
 		}
-		if !fc.CheckSeal() {
-			return nil, fmt.Errorf("HMAC doesn't match")
-		}
+
 	}
 
 	blockPosition := fc.blocks[blockIdx].offset
@@ -406,7 +407,22 @@ func (fc FileCrypt) HMACRead() ([]byte, error) {
 }
 
 // Checks if hmac computed is equal to hmac in FileCrypt object
-func (fc *FileCrypt) CheckSeal() bool {
+func (fc *FileCrypt) checkSeal() bool {
+	// open file for reading
+	file, err := openFileR(fc.fname)
+	defer file.Close()
+	if err != nil {
+		return false
+	}
+
+	fcLen := blockLen(fc.nBlocks) + FC_HDR_REG_BDATA_OFFSET
+
+	// Get Encryption Key
+	fc.hdrK, err = retrieveKHdr(int64(fcLen), file)
+	if err != nil {
+		return false
+	}
+
 	hmac1, err := fc.seal()
 	if err != nil {
 		return false

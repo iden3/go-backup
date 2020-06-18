@@ -23,7 +23,18 @@ const (
 	FC_HDRK_DEF_VERSION = FC_HDRK_VERSION_1
 )
 
-func retrieveKey(file *os.File, offset int64, keyIn []byte, hdrK *[]byte) ([]byte, error) {
+func retrieveKey(keyIn, hdrB []byte) ([]byte, error) {
+
+	// check Key HDR Type -> If error, abort
+	keyHdr, err := getKeyFCFromType(hdrB[FC_HDR_FCTYPE_OFFSET])
+	if err != nil {
+		return nil, fmt.Errorf("getKeyFCFromType : %w", err)
+	}
+
+	return keyHdr.retrieveKey(keyIn, hdrB)
+}
+
+func retrieveKHdr(offset int64, file *os.File) ([]byte, error) {
 	// Set correct position
 	_, err := file.Seek(offset, 0)
 	if err != nil {
@@ -41,7 +52,7 @@ func retrieveKey(file *os.File, offset int64, keyIn []byte, hdrK *[]byte) ([]byt
 		return nil, fmt.Errorf("getKeyFCFromType : %w", err)
 	}
 
-	return keyHdr.retrieveKey(keyIn, hdrBytes, hdrK, file)
+	return keyHdr.retrieveKHdr(hdrBytes, file)
 }
 
 func NewHdrKey(KeyIn []byte, params ...int) (fileCryptKey, error) {

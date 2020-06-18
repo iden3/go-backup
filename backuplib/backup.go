@@ -91,7 +91,7 @@ func newBackupElement(t, action int) *Backup {
 func CreateBackup(fname string) error {
 	key := GetkOp()
 	nBlocks := len(backupRegistry)
-	fileCrypt, err := fc.New(nBlocks, fname, nil, key, fc.FC_KEY_T_PBKDF2)
+	fileCrypt, err := fc.New(nBlocks, fname, key, key, fc.FC_KEY_T_PBKDF2)
 	if err != nil {
 		return fmt.Errorf("New FC : %w", err)
 	}

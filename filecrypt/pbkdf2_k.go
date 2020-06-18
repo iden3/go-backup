@@ -144,8 +144,14 @@ func (hdr Pbkdf2Fc) toBytes() ([]byte, error) {
 	return header, nil
 }
 
-func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, h *[]byte, file *os.File) ([]byte, error) {
+func (hdr *Pbkdf2Fc) retrieveKey(keyIn, hdrK []byte) ([]byte, error) {
+	hdr.fromBytes(hdrK)
+	hdr.keyIn = keyIn
+	err := hdr.computeKey()
+	return hdr.keyOut, err
+}
 
+func (hdr *Pbkdf2Fc) retrieveKHdr(prevHhdr []byte, file *os.File) ([]byte, error) {
 	pbkdf2Len, err := readNBytesFromFile(file, 1)
 	if err != nil {
 		return nil, fmt.Errorf("readNBytesFromFile : %w", err)
@@ -163,12 +169,7 @@ func (hdr *Pbkdf2Fc) retrieveKey(keyIn, prevHhdr []byte, h *[]byte, file *os.Fil
 	pbkdf2Byte = append(pbkdf2Byte, pbkdf2Len...)
 	pbkdf2Byte = append(pbkdf2Byte, pbkdf2Rem...)
 
-	hdr.fromBytes(pbkdf2Byte)
-	hdr.keyIn = keyIn
-	err = hdr.computeKey()
-	*h, _ = hdr.toBytes()
-
-	return hdr.keyOut, nil
+	return pbkdf2Byte, nil
 }
 
 func (hdr *Pbkdf2Fc) generateKey(fname string) ([]byte, error) {
